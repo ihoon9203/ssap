@@ -7,6 +7,7 @@ import { ButtonHTMLAttributes, useState } from "react";
 import { Copy, Check, Users, Clock, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { saveAvailability } from "@/services/schedule";
 
 // Mock data
 const MOCK_SCHEDULE = {
@@ -36,7 +37,7 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
     const [copied, setCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<"input" | "result">("input");
     const [isConfirmed, setIsConfirmed] = useState(false);
-    const [availabilities, setAvailabilities] = useState<{ [key: string]: number }>();
+    const [availabilities, setAvailabilities] = useState<{ [key: string]: number }>({});
 
     const copyInviteCode = () => {
         navigator.clipboard.writeText(MOCK_SCHEDULE.inviteCode);
@@ -55,8 +56,20 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
         alert("Schedule confirmed! Notifications sent.");
     };
 
-    const handleSaveAvailability = () => {
-        console.log("Saving availability...", availabilities);
+    const handleSaveAvailability = async () => {
+        if (!availabilities) return;
+
+        try {
+            await saveAvailability({
+                scheduleId: params.id,
+                startDate: MOCK_SCHEDULE.startDate,
+                availabilities
+            });
+            alert("Availability saved successfully!");
+        } catch (error: any) {
+            console.error("Error saving availability:", error);
+            alert(error.message || "Failed to save availability.");
+        }
     };
 
     return (
