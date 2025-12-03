@@ -1,41 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/components/auth/UserProvider";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ProfileEditor() {
-    const { user, profile, refreshProfile } = useUser();
+    const { user, refreshUser } = useUser();
     const [isEditing, setIsEditing] = useState(false);
-    const [newName, setNewName] = useState(profile?.full_name || "");
+    const [newName, setNewName] = useState(user?.username || user?.user_metadata?.full_name || "");
     const [isSaving, setIsSaving] = useState(false);
     const supabase = createClient();
 
+    // Update local state when user context updates (e.g. after refresh)
+    useEffect(() => {
+        setNewName(user?.username || user?.user_metadata?.full_name || "");
+    }, [user]);
+
     const handleEdit = () => {
-        setNewName(profile?.full_name || "");
+        setNewName(user?.username || user?.user_metadata?.full_name || "");
         setIsEditing(true);
     };
 
     const handleCancel = () => {
         setIsEditing(false);
-        setNewName(profile?.full_name || "");
+        setNewName(user?.username || user?.user_metadata?.full_name || "");
     };
 
     const handleSave = async () => {
-        if (!user || !newName.trim()) return;
+        if (!user) return;
+
+        if (newName.length > 20) {
+            alert("Username must be 20 characters or less.");
+            return;
+        }
 
         setIsSaving(true);
         try {
-            const { error } = await supabase
+            // Update Public Profiles Table
+            const { error: profileError } = await supabase
                 .from("profiles")
-                .update({ full_name: newName.trim() })
+                .update({
+                    username: newName.trim() || null
+                })
                 .eq("id", user.id);
 
-            if (error) throw error;
+            if (profileError) throw profileError;
 
-            await refreshProfile();
+            // Refresh user context to pull new data from profiles
+            await refreshUser();
             setIsEditing(false);
         } catch (error) {
             console.error("Failed to update profile:", error);
@@ -45,10 +59,12 @@ export function ProfileEditor() {
         }
     };
 
-    // if (!profile) return null; // Removed early return
-
-    const displayName = profile?.full_name || user?.user_metadata?.full_name || "User";
+    const displayName = user?.username || user?.user_metadata?.full_name || "User";
     const provider = user?.app_metadata?.provider;
+    const getUserAvatar = () => {
+        return <img src={user?.avatar_url} alt="User Avatar" className="h-8 w-8 rounded-full" />
+    }
+
 
     const getProviderIcon = (provider?: string) => {
         switch (provider) {
@@ -124,14 +140,18 @@ export function ProfileEditor() {
     }
 
     return (
-        <button
-            onClick={handleEdit}
-            className="group flex items-center gap-3 rounded-full border bg-background px-5 py-2.5 text-base font-medium shadow-sm transition-colors hover:bg-muted"
-            title="Edit name"
-        >
-            {getProviderIcon(provider)}
-            <span>{displayName}</span>
-            <Pencil className="ml-1 h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-        </button>
+        <div>
+            <button
+                onClick={handleEdit}
+                className="group flex items-center gap-3 rounded-full border bg-background px-5 py-2.5 text-base font-medium shadow-sm transition-colors hover:bg-muted"
+                title="Edit name"
+            >
+                {getUserAvatar()}
+                {getProviderIcon(provider)}
+                <span>{displayName}</span>
+                <Pencil className="ml-1 h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </button>
+        </div>
+
     );
 }

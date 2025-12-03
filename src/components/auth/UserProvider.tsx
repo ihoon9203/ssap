@@ -4,18 +4,22 @@ import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 
+export interface ExtendedUser extends User {
+    username?: string;
+    full_name?: string;
+    avatar_url?: string;
+}
+
 interface UserContextType {
-    user: User | null;
+    user: ExtendedUser | null;
     isLoading: boolean;
-    profile: any | null;
-    refreshProfile: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
     user: null,
     isLoading: true,
-    profile: null,
-    refreshProfile: async () => { },
+    refreshUser: async () => { },
 });
 
 export function UserProvider({
@@ -25,48 +29,87 @@ export function UserProvider({
     children: React.ReactNode;
     initialUser: User | null;
 }) {
-    const [user, setUser] = useState<User | null>(initialUser);
-    const [profile, setProfile] = useState<any | null>(null);
+    const [user, setUser] = useState<ExtendedUser | null>(initialUser);
     const [isLoading, setIsLoading] = useState(!initialUser);
     const supabase = createClient();
 
-    const fetchProfile = async (userId: string) => {
+    const fetchAndMergeProfile = async (baseUser: User) => {
         try {
-            const { data, error } = await supabase
+            const { data: profile, error } = await supabase
                 .from("profiles")
-                .select("*")
-                .eq("id", userId)
+                .select("username, full_name, avatar_url")
+                .eq("id", baseUser.id)
                 .single();
 
             if (error) {
-                console.error("Error fetching profile:", error);
+                // If profile doesn't exist (PGRST116), create it
+                if (error.code === "PGRST116") {
+                    console.log("Profile not found, creating new profile...");
+                    // Note: username must be unique, so using full_name might fail if duplicate.
+                    // Ideally we should handle this, but following user's lead for now.
+                    const { data: newProfile, error: createError } = await supabase
+                        .from("profiles")
+                        .insert({
+                            id: baseUser.id,
+                            full_name: baseUser.user_metadata?.full_name,
+                            avatar_url: baseUser.user_metadata?.avatar_url,
+                            username: baseUser.user_metadata?.full_name
+                        })
+                        .select("username, full_name, avatar_url")
+                        .single();
+
+                    if (createError) {
+                        console.error("Error creating profile:", createError);
+                        setUser(baseUser);
+                    } else {
+                        const extendedUser: ExtendedUser = {
+                            ...baseUser,
+                            username: newProfile.username,
+                            full_name: newProfile.full_name,
+                            avatar_url: newProfile.avatar_url
+                        };
+                        setUser(extendedUser);
+                    }
+                } else {
+                    console.error("Error fetching profile:", error);
+                    setUser(baseUser);
+                }
             } else {
-                setProfile(data);
+                // Merge profile data into user object
+                const extendedUser: ExtendedUser = {
+                    ...baseUser,
+                    username: profile.username,
+                    full_name: profile.full_name,
+                    avatar_url: profile.avatar_url
+                };
+                setUser(extendedUser);
             }
         } catch (error) {
-            console.error("Error fetching profile:", error);
+            console.error("Error merging profile:", error);
+            setUser(baseUser);
         }
     };
 
-    const refreshProfile = async () => {
-        if (user) {
-            await fetchProfile(user.id);
+    const refreshUser = async () => {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+            await fetchAndMergeProfile(currentUser);
         }
     };
 
     useEffect(() => {
+        // Initial fetch if we have a user but no extended data yet
         if (initialUser) {
-            fetchProfile(initialUser.id);
+            fetchAndMergeProfile(initialUser);
         }
 
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((event, session) => {
-            setUser(session?.user ?? null);
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-                fetchProfile(session.user.id);
+                await fetchAndMergeProfile(session.user);
             } else {
-                setProfile(null);
+                setUser(null);
             }
             setIsLoading(false);
         });
@@ -74,10 +117,10 @@ export function UserProvider({
         return () => {
             subscription.unsubscribe();
         };
-    }, [supabase, initialUser]);
+    }, [supabase]);
 
     return (
-        <UserContext.Provider value={{ user, isLoading, profile, refreshProfile }}>
+        <UserContext.Provider value={{ user, isLoading, refreshUser }}>
             {children}
         </UserContext.Provider>
     );

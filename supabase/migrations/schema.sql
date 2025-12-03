@@ -7,7 +7,7 @@ create table profiles (
   avatar_url text,
   website text,
 
-  constraint username_length check (char_length(username) >= 3)
+  constraint username_length check (char_length(username) <= 20)
 );
 
 -- Set up Row Level Security (RLS)

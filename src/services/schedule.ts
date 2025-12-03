@@ -42,7 +42,7 @@ export async function saveAvailability({
                 user_id: user.id,
                 role: "guest",
             })
-            .select("id")
+            .select("id, profiles(nickname, full_name, avatar_url)") // Select profile data for the new participant
             .single();
 
         if (joinError) {
