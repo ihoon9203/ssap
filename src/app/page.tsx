@@ -10,46 +10,32 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 // Mock data
-const MOCK_SCHEDULES = [
-  {
-    id: "1",
-    title: "Project Kickoff",
-    status: "confirmed" as const,
-    start_date: "2024-04-10",
-    end_date: "2024-04-12",
-    participant_count: 4,
-  },
-  {
-    id: "2",
-    title: "Team Lunch",
-    status: "pending" as const,
-    start_date: "2024-04-15",
-    end_date: "2024-04-20",
-    participant_count: 6,
-  },
-];
+import { ScheduleWithDetails } from "@/models/types";
 
-import { ProfileEditor } from "@/components/home/ProfileEditor";
+
+
+import { UserEditor } from "@/components/home/ProfileEditor";
 import { LandingPage } from "@/components/home/LandingPage";
+import { getCreatedScheduleList, getJoinedScheduleList } from "@/services/ScheduleProvider";
 
-// Placeholder for Schedule type and getUserSchedules function, assuming they exist elsewhere or will be added.
-// For the purpose of this edit, we'll define a basic type and a mock function.
-type Schedule = typeof MOCK_SCHEDULES[0]; // Or a more comprehensive type
-async function getUserSchedules(): Promise<Schedule[]> {
-  // Mock API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(MOCK_SCHEDULES); // Return mock data for now
-    }, 500);
-  });
-}
 
 
 export default function Home() {
   const { user, isLoading } = useUser();
   const [view, setView] = useState<"list" | "calendar">("list");
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [schedules, setSchedules] = useState<ScheduleWithDetails[]>([]);
   const [isFetching, setIsFetching] = useState(true);
+
+  async function getUserSchedules(): Promise<ScheduleWithDetails[]> {
+    if (!user) {
+      return [];
+    }
+    const createdSchedules = await getCreatedScheduleList(user.id) as ScheduleWithDetails[];
+    const joinedSchedules = await getJoinedScheduleList(user.id, createdSchedules.map((s) => s.id)) as ScheduleWithDetails[];
+
+    return [...createdSchedules, ...joinedSchedules];
+  }
+
 
   useEffect(() => {
     if (user) {
@@ -74,7 +60,7 @@ export default function Home() {
         {/* Header */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <ProfileEditor />
+            <UserEditor />
             <p className="text-muted-foreground">
               Manage your schedules and events
             </p>
@@ -136,9 +122,9 @@ export default function Home() {
           </div>
 
           {view === "list" ? (
-            <ScheduleList schedules={MOCK_SCHEDULES} />
+            <ScheduleList schedules={schedules} />
           ) : (
-            <CalendarView schedules={MOCK_SCHEDULES} />
+            <CalendarView schedules={schedules} />
           )}
         </section>
       </div>

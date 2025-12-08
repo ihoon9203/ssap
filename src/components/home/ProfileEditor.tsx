@@ -3,29 +3,29 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@/components/auth/UserProvider";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, Check, X, Loader2 } from "lucide-react";
+import { Pencil, Check, X, Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function ProfileEditor() {
-    const { user, refreshUser } = useUser();
+export function UserEditor() {
+    const { user, authUser, refreshUser, signOut } = useUser();
     const [isEditing, setIsEditing] = useState(false);
-    const [newName, setNewName] = useState(user?.username || user?.user_metadata?.full_name || "");
+    const [newName, setNewName] = useState(user?.username || authUser?.user_metadata?.full_name || "");
     const [isSaving, setIsSaving] = useState(false);
     const supabase = createClient();
 
     // Update local state when user context updates (e.g. after refresh)
     useEffect(() => {
-        setNewName(user?.username || user?.user_metadata?.full_name || "");
-    }, [user]);
+        setNewName(user?.username || authUser?.user_metadata?.full_name || "");
+    }, [user, authUser]);
 
     const handleEdit = () => {
-        setNewName(user?.username || user?.user_metadata?.full_name || "");
+        setNewName(user?.username || authUser?.user_metadata?.full_name || "");
         setIsEditing(true);
     };
 
     const handleCancel = () => {
         setIsEditing(false);
-        setNewName(user?.username || user?.user_metadata?.full_name || "");
+        setNewName(user?.username || authUser?.user_metadata?.full_name || "");
     };
 
     const handleSave = async () => {
@@ -38,9 +38,9 @@ export function ProfileEditor() {
 
         setIsSaving(true);
         try {
-            // Update Public Profiles Table
+            // Update Public Users Table
             const { error: profileError } = await supabase
-                .from("profiles")
+                .from("users") // Changed from profiles to users
                 .update({
                     username: newName.trim() || null
                 })
@@ -48,7 +48,7 @@ export function ProfileEditor() {
 
             if (profileError) throw profileError;
 
-            // Refresh user context to pull new data from profiles
+            // Refresh user context to pull new data from users
             await refreshUser();
             setIsEditing(false);
         } catch (error) {
@@ -59,10 +59,10 @@ export function ProfileEditor() {
         }
     };
 
-    const displayName = user?.username || user?.user_metadata?.full_name || "User";
-    const provider = user?.app_metadata?.provider;
+    const displayName = user?.username || authUser?.user_metadata?.full_name || "User";
+    const provider = authUser?.app_metadata?.provider;
     const getUserAvatar = () => {
-        return <img src={user?.avatar_url} alt="User Avatar" className="h-8 w-8 rounded-full" />
+        return <img src={user?.avatar_url || authUser?.user_metadata?.avatar_url} alt="User Avatar" className="h-8 w-8 rounded-full" />
     }
 
 
@@ -140,7 +140,7 @@ export function ProfileEditor() {
     }
 
     return (
-        <div>
+        <div className="flex items-center gap-2">
             <button
                 onClick={handleEdit}
                 className="group flex items-center gap-3 rounded-full border bg-background px-5 py-2.5 text-base font-medium shadow-sm transition-colors hover:bg-muted"
@@ -151,7 +151,17 @@ export function ProfileEditor() {
                 <span>{displayName}</span>
                 <Pencil className="ml-1 h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
+            <button
+                onClick={() => {
+                    if (confirm("Are you sure you want to log out?")) {
+                        signOut();
+                    }
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-destructive"
+                title="Log out"
+            >
+                <LogOut className="h-4 w-4" />
+            </button>
         </div>
-
     );
 }

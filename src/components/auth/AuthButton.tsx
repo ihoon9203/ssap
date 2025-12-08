@@ -17,12 +17,14 @@ export function AuthButton({ provider, icon, className, children, ...props }: Au
     const handleLogin = async () => {
         setIsLoading(true);
         try {
+            console.log("signing in with ", provider);
             await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
                     redirectTo: `${location.origin}/auth/callback`,
                 },
             });
+            console.log("signed in with ", provider);
         } catch (error) {
             console.error("Login failed:", error);
             setIsLoading(false);

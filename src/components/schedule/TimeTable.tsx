@@ -1,30 +1,36 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { format, eachDayOfInterval, addMinutes, startOfDay } from "date-fns";
+import { formatDate, eachDayOfInterval, addMinutes, startOfDay } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 interface TimeTableProps {
-    startDate: Date;
-    endDate: Date;
-    onChange?: (availability: { [key: string]: number }) => void; // TODO: Define proper type
+    dates: Date[];
+    availabilities: string[];
+    allowedSlots?: string[];
+    onChange?: (availability: string[]) => void;
 }
 
-export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
+export function TimeTable({ dates, availabilities, allowedSlots, onChange }: TimeTableProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState<{ dayIdx: number; timeIdx: number } | null>(null);
     const [dragCurrent, setDragCurrent] = useState<{ dayIdx: number; timeIdx: number } | null>(null);
     const [isSelecting, setIsSelecting] = useState(true); // true = selecting, false = deselecting
-    const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+    const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set(availabilities));
     const [overlayStyle, setOverlayStyle] = useState<React.CSSProperties | null>(null);
 
-    const days = eachDayOfInterval({ start: startDate, end: endDate });
+    // Sync selectedSlots when prop changes (e.g. initial load)
+    useEffect(() => {
+        setSelectedSlots(new Set(availabilities));
+    }, [availabilities]);
+
+    // dates prop is used directly instead of generating from interval
 
     // Generate 30-min intervals for 24 hours (48 slots)
     const timeSlots = Array.from({ length: 48 }, (_, i) => {
         const date = addMinutes(startOfDay(new Date()), i * 30);
-        return format(date, "HH:mm");
+        return formatDate(date, "HH:mm");
     });
 
     const getSelectionBox = () => {
@@ -35,7 +41,10 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
         const minTime = Math.min(dragStart.timeIdx, dragCurrent.timeIdx);
         const maxTime = Math.max(dragStart.timeIdx, dragCurrent.timeIdx);
 
-        return { minDay, maxDay, minTime, maxTime };
+        const startDateStr = formatDate(dates[minDay], "yyyyMMdd");
+        const endDateStr = formatDate(dates[maxDay], "yyyyMMdd");
+
+        return { minDay, maxDay, minTime, maxTime, startDateStr, endDateStr };
     };
 
     // Calculate overlay position
@@ -76,12 +85,16 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
     }, [isDragging, dragStart, dragCurrent]);
 
     const handleMouseDown = (dayIdx: number, timeIdx: number) => {
+        const key = `${formatDate(dates[dayIdx], "yyyyMMdd")}-${timeIdx}`;
+
+        // Check constraint
+        if (allowedSlots && !allowedSlots.includes(key)) return;
+
         setIsDragging(true);
         setDragStart({ dayIdx, timeIdx });
         setDragCurrent({ dayIdx, timeIdx });
 
         // Determine if we are selecting or deselecting based on the start cell
-        const key = `${dayIdx}-${timeIdx}`;
         setIsSelecting(!selectedSlots.has(key));
     };
 
@@ -102,9 +115,14 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
         const box = getSelectionBox();
         if (box) {
             const newSlots = new Set(selectedSlots);
+            const startDate = dates[box.minDay];
+            const endDate = dates[box.maxDay];
+
             for (let d = box.minDay; d <= box.maxDay; d++) {
                 for (let t = box.minTime; t <= box.maxTime; t++) {
-                    const key = `${d}-${t}`;
+                    const key = `${formatDate(dates[d], "yyyyMMdd")}-${t}`;
+                    if (allowedSlots && !allowedSlots.includes(key)) continue;
+
                     if (isSelecting) {
                         newSlots.add(key);
                     } else {
@@ -116,9 +134,9 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
 
             // Trigger onChange
             if (onChange) {
-                const availabilityObj: { [key: string]: number } = {};
+                const availabilityObj: string[] = [];
                 newSlots.forEach(key => {
-                    availabilityObj[key] = 1;
+                    availabilityObj.push(key);
                 });
                 onChange(availabilityObj);
             }
@@ -161,18 +179,19 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
 
                     {/* Rows */}
                     <div className="space-y-2">
-                        {days.map((day, dayIdx) => (
+                        {dates.map((day, dayIdx) => (
                             <div key={day.toString()} className="flex items-center gap-4">
                                 {/* Date Label */}
                                 <div className="w-28 flex-shrink-0 text-sm font-medium">
-                                    {format(day, "EEE, MMM d")}
+                                    {formatDate(day, "EEE, MMM d")}
                                 </div>
 
                                 {/* Time Grid */}
                                 <div className="flex flex-1">
                                     {timeSlots.map((_, timeIdx) => {
-                                        const key = `${dayIdx}-${timeIdx}`;
+                                        const key = `${formatDate(day, "yyyyMMdd")}-${timeIdx}`;
                                         const isSelected = selectedSlots.has(key);
+                                        const isDisabled = allowedSlots && !allowedSlots.includes(key);
 
                                         let isInBox = false;
                                         if (isDragging && selectionBox) {
@@ -183,6 +202,9 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
                                                 timeIdx <= selectionBox.maxTime;
                                         }
 
+                                        // Prevent visual selection if disabled
+                                        if (isDisabled) isInBox = false;
+
                                         const visualSelected = isInBox ? isSelecting : isSelected;
                                         const isHourEnd = timeIdx % 2 === 1;
 
@@ -191,11 +213,19 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
                                                 key={timeIdx}
                                                 data-day={dayIdx}
                                                 data-time={timeIdx}
-                                                onMouseDown={(e) => { e.preventDefault(); handleMouseDown(dayIdx, timeIdx); }}
-                                                onMouseEnter={() => handleMouseEnter(dayIdx, timeIdx)}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    if (!isDisabled) handleMouseDown(dayIdx, timeIdx);
+                                                }}
+                                                onMouseEnter={() => {
+                                                    if (!isDisabled) handleMouseEnter(dayIdx, timeIdx);
+                                                }}
                                                 className={cn(
-                                                    "h-10 flex-1 cursor-pointer transition-colors border-r border-border/20",
-                                                    visualSelected ? "bg-primary" : "bg-muted/30 hover:bg-primary/10",
+                                                    "h-10 flex-1 transition-colors border-r border-border/20",
+                                                    isDisabled
+                                                        ? "bg-gray-200 dark:bg-gray-800 cursor-not-allowed" // Disabled style
+                                                        : "cursor-pointer",
+                                                    !isDisabled && (visualSelected ? "bg-primary" : "bg-muted/30 hover:bg-primary/10"),
                                                     // Stronger divider for hour ends
                                                     isHourEnd && "border-r-border/60",
                                                     // First item rounded left
@@ -203,7 +233,11 @@ export function TimeTable({ startDate, endDate, onChange }: TimeTableProps) {
                                                     // Last item rounded right and no border
                                                     timeIdx === timeSlots.length - 1 && "rounded-r-sm border-r-0"
                                                 )}
-                                                title={`${format(day, "MMM d")} ${timeSlots[timeIdx]}`}
+                                                title={
+                                                    isDisabled
+                                                        ? "Unavailable"
+                                                        : `${formatDate(day, "M월 d일")} ${timeSlots[timeIdx]}`
+                                                }
                                             />
                                         );
                                     })}

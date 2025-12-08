@@ -16,17 +16,9 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock data type (same as ScheduleList)
-type Schedule = {
-    id: string;
-    title: string;
-    status: "pending" | "confirmed";
-    start_date: string;
-    end_date: string;
-    participant_count: number;
-};
+import { ScheduleWithDetails } from "@/models/types";
 
-export function CalendarView({ schedules }: { schedules: Schedule[] }) {
+export function CalendarView({ schedules }: { schedules: ScheduleWithDetails[] }) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));

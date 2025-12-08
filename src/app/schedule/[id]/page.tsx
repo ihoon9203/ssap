@@ -3,46 +3,86 @@
 import { TimeTable } from "@/components/schedule/TimeTable";
 import { HeatmapView } from "@/components/schedule/HeatmapView";
 import { BestTimeList } from "@/components/schedule/BestTimeList";
-import { ButtonHTMLAttributes, useState } from "react";
+import { ButtonHTMLAttributes, useState, useEffect, use } from "react";
 import { Copy, Check, Users, Clock, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { saveAvailability } from "@/services/schedule";
+import { readSchedule, saveAvailability, updateSchedule } from "@/services/ScheduleProvider";
+import { eachDayOfInterval } from "date-fns";
+import { createClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
 
-// Mock data
-const MOCK_SCHEDULE = {
-    id: "mock-id",
-    title: "Project Kickoff",
-    description: "Let's find a time to discuss the new project requirements and timeline.",
-    startDate: new Date(2024, 3, 10), // April 10, 2024
-    endDate: new Date(2024, 3, 12),   // April 12, 2024
-    inviteCode: "PROJ-2024",
-    participants: [
-        { id: "1", name: "Alice", avatar: null },
-        { id: "2", name: "Bob", avatar: null },
-        { id: "3", name: "Charlie", avatar: null },
-        { id: "4", name: "David", avatar: null },
-    ]
-};
+export default function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    const [schedule, setSchedule] = useState<any | null>(null); // Use proper type if available
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isCreator, setIsCreator] = useState(false);
 
-// Mock availabilities
-const MOCK_AVAILABILITIES: { [key: string]: number } = {
-    "0-20": 4, "0-21": 4, "0-22": 4, // Day 0, 10:00 - 11:30 (Full)
-    "0-23": 3, "0-24": 2,            // Day 0, 11:30 - 12:30
-    "1-28": 4, "1-29": 4,            // Day 1, 14:00 - 15:00 (Full)
-    "2-18": 1, "2-19": 2,            // Day 2, 09:00 - 10:00
-};
-
-export default function SchedulePage({ params }: { params: { id: string } }) {
     const [copied, setCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<"input" | "result">("input");
     const [isConfirmed, setIsConfirmed] = useState(false);
-    const [availabilities, setAvailabilities] = useState<{ [key: string]: number }>({});
+    const [availabilities, setAvailabilities] = useState<string[]>([]);
+
+    const supabase = createClient();
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUser(user);
+        };
+        checkUser();
+    }, []);
+
+    useEffect(() => {
+        const fetchSchedule = async () => {
+            try {
+                setIsLoading(true);
+                const data = await readSchedule(id);
+                if (data) {
+                    setSchedule(data);
+
+                    // Determine Role
+                    if (currentUser && data.creator_id === currentUser.id) {
+                        setIsCreator(true);
+                        // Creator starts with the schedule's available times
+                        if (data.available_time) {
+                            setAvailabilities(data.available_time);
+                        }
+                    } else if (currentUser) {
+                        // select my availability if exist only
+                        const { data, error } = await supabase
+                            .from('availabilities')
+                            .select()
+                            .eq('user_id', currentUser.id)
+                            .eq('schedule_id', id)
+                            .single();
+                        if (data) {
+                            setAvailabilities(data.selected_times);
+                        }
+                    }
+                } else {
+                    setError("Schedule not found");
+                }
+            } catch (err: any) {
+                setError(err.message || "Failed to load schedule");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (id && currentUser !== undefined) { // Wait for user check (even if null)
+            fetchSchedule();
+        }
+    }, [id, currentUser]);
 
     const copyInviteCode = () => {
-        navigator.clipboard.writeText(MOCK_SCHEDULE.inviteCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (schedule?.invite_code) {
+            navigator.clipboard.writeText(schedule.invite_code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     const handleConfirm = async () => {
@@ -57,20 +97,53 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
     };
 
     const handleSaveAvailability = async () => {
-        if (!availabilities) return;
+        if (!availabilities || availabilities.length === 0) {
+            alert("Please select at least one availability.");
+            return;
+        }
 
         try {
-            await saveAvailability({
-                scheduleId: params.id,
-                startDate: MOCK_SCHEDULE.startDate,
-                availabilities
-            });
-            alert("Availability saved successfully!");
+            if (isCreator) {
+                // Creator updates the Schedule's available_time
+                await updateSchedule(id, { available_time: availabilities });
+                alert("Schedule times updated successfully!");
+            } else {
+                // Participant saves their availability
+                if (!currentUser) return; // Should be handled by logic but safety check
+
+                await saveAvailability(id, currentUser.id, availabilities);
+                alert("Availability saved successfully!");
+            }
         } catch (error: any) {
-            console.error("Error saving availability:", error);
-            alert(error.message || "Failed to save availability.");
+            console.error("Error saving:", error);
+            alert(error.message || "Failed to save.");
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    if (error || !schedule) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+                <h1 className="text-2xl font-bold text-destructive">Error</h1>
+                <p className="text-muted-foreground">{error || "Schedule not found"}</p>
+                <Link href="/" className="text-primary hover:underline">
+                    Go Home
+                </Link>
+            </div>
+        );
+    }
+
+    // Convert string dates from DB back to Date objects for TimeTable
+    const scheduleDates = schedule.dates
+        ? schedule.dates.map((d: string) => new Date(d))
+        : [];
 
     return (
         <main className="min-h-screen bg-background p-4 sm:p-8">
@@ -85,7 +158,7 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
                         </div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-3xl font-bold tracking-tight text-primary">
-                                {MOCK_SCHEDULE.title}
+                                {schedule.title}
                             </h1>
                             {isConfirmed && (
                                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -94,7 +167,7 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
                             )}
                         </div>
                         <p className="max-w-2xl text-muted-foreground">
-                            {MOCK_SCHEDULE.description}
+                            {schedule.description}
                         </p>
                     </div>
 
@@ -104,7 +177,7 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
                                 Code:
                             </span>
                             <code className="rounded bg-muted px-2 py-1 font-mono text-sm font-bold">
-                                {MOCK_SCHEDULE.inviteCode}
+                                {schedule.invite_code}
                             </code>
                             <button
                                 onClick={copyInviteCode}
@@ -120,9 +193,9 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
                         </div>
 
                         <div className="flex -space-x-2">
-                            {MOCK_SCHEDULE.participants.map((p, i) => (
-                                <div key={p.id} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary/10 text-xs font-medium text-primary" title={p.name}>
-                                    {p.name[0]}
+                            {schedule.participants_id?.map((pid: string, i: number) => (
+                                <div key={pid} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary/10 text-xs font-medium text-primary" title={pid}>
+                                    {pid.substring(0, 2).toUpperCase()}
                                 </div>
                             ))}
                         </div>
@@ -171,16 +244,21 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
                                 <span className="font-semibold">Tip:</span> Click and drag to select multiple time slots.
                             </div>
                             <TimeTable
-                                startDate={MOCK_SCHEDULE.startDate}
-                                endDate={MOCK_SCHEDULE.endDate}
+                                dates={scheduleDates}
+                                availabilities={availabilities}
+                                allowedSlots={isCreator ? undefined : schedule?.available_time}
                                 onChange={(availabilities) => setAvailabilities(availabilities)}
                             />
                             <div className="flex justify-end gap-4">
-                                <button className="rounded-full border border-input bg-background px-6 py-2.5 text-sm font-medium transition-colors hover:bg-muted">
+                                <button className="rounded-full border border-input bg-background px-6 py-2.5 text-sm font-medium transition-colors hover:bg-muted" onClick={() => {
+                                    // Reset logic
+                                    if (isCreator && schedule?.available_time) setAvailabilities(schedule.available_time);
+                                    else setAvailabilities([]);
+                                }}>
                                     Reset
                                 </button>
                                 <button className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90" onClick={handleSaveAvailability}>
-                                    Save Availability
+                                    {isCreator ? "Update Schedule Times" : "Save Availability"}
                                 </button>
                             </div>
                         </div>
@@ -188,10 +266,10 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
                         <div className="grid gap-8 lg:grid-cols-3">
                             <div className="lg:col-span-2 space-y-6">
                                 <HeatmapView
-                                    startDate={MOCK_SCHEDULE.startDate}
-                                    endDate={MOCK_SCHEDULE.endDate}
-                                    totalParticipants={MOCK_SCHEDULE.participants.length}
-                                    availabilities={MOCK_AVAILABILITIES}
+                                    startDate={scheduleDates[0]}
+                                    endDate={scheduleDates[scheduleDates.length - 1]}
+                                    totalParticipants={schedule.participants_id?.length || 0}
+                                    availabilities={{}} // FixMe: Handle Mock availabilities or fetch real ones
                                 />
 
                                 {/* Creator Actions */}
@@ -215,9 +293,9 @@ export default function SchedulePage({ params }: { params: { id: string } }) {
 
                             <div className="lg:col-span-1">
                                 <BestTimeList
-                                    startDate={MOCK_SCHEDULE.startDate}
-                                    totalParticipants={MOCK_SCHEDULE.participants.length}
-                                    availabilities={MOCK_AVAILABILITIES}
+                                    startDate={scheduleDates[0]}
+                                    totalParticipants={schedule.participants_id?.length || 0}
+                                    availabilities={{}} // FixMe: Handle Mock availabilities or fetch real ones
                                 />
                             </div>
                         </div>

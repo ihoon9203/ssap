@@ -3,18 +3,15 @@
 import { Calendar, Clock, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ko } from "date-fns/locale";
 
 // Mock data type
-type Schedule = {
-    id: string;
-    title: string;
-    status: "pending" | "confirmed";
-    start_date: string;
-    end_date: string;
-    participant_count: number;
-};
+import { ScheduleWithDetails } from "@/models/types";
+import { formatDate } from "@/lib/date";
+import { useRouter } from "next/navigation";
 
-export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
+export function ScheduleList({ schedules }: { schedules: ScheduleWithDetails[] }) {
+    const router = useRouter();
     if (schedules.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-8 text-center animate-in fade-in zoom-in duration-500">
@@ -36,6 +33,9 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
                     key={schedule.id}
                     className="group relative flex items-center justify-between rounded-xl border bg-card p-4 transition-all hover:shadow-md animate-in slide-in-from-bottom-2 duration-500"
                     style={{ animationDelay: `${i * 100}ms` }}
+                    onClick={() => {
+                        router.push(`/schedule/${schedule.id}`);
+                    }}
                 >
                     <div className="flex items-start gap-4">
                         <div
@@ -54,10 +54,27 @@ export function ScheduleList({ schedules }: { schedules: Schedule[] }) {
                         </div>
                         <div>
                             <h3 className="font-semibold">{schedule.title}</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {format(new Date(schedule.start_date), "MMM d")} -{" "}
-                                {format(new Date(schedule.end_date), "MMM d, yyyy")}
-                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {schedule.dates && schedule.dates.length > 0 ? (
+                                    <>
+                                        {schedule.dates.slice(0, 10).map((date) => (
+                                            <span
+                                                key={date.toString()}
+                                                className="inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                                            >
+                                                {formatDate(new Date(date), "MMM d (EEE)")}
+                                            </span>
+                                        ))}
+                                        {schedule.dates.length > 10 && (
+                                            <span className="inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                                                +{schedule.dates.length - 10}
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="text-sm text-muted-foreground">No dates selected</span>
+                                )}
+                            </div>
                         </div>
                     </div>
 

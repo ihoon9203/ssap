@@ -9,14 +9,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkSchema() {
     const { data, error } = await supabase
-        .from("profiles")
+        .from("Users")
         .select("*")
         .limit(1);
 
     if (error) {
-        console.error("Error fetching profiles:", error);
+        console.error("Error fetching users:", error);
     } else {
-        console.log("Profiles table columns:", data && data.length > 0 ? Object.keys(data[0]) : "No data found");
+        console.log("Users table columns:", data && data.length > 0 ? Object.keys(data[0]) : "No data found");
         console.log("Sample row:", data);
     }
 }

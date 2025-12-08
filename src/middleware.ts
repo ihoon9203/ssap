@@ -30,6 +30,9 @@ export async function middleware(request: NextRequest) {
                     )
                 },
             },
+            cookieOptions: {
+                secure: process.env.NODE_ENV === 'production',
+            },
         }
     )
 

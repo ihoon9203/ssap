@@ -28,13 +28,15 @@ export default async function RootLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  console.log("[RootLayout] Server-side User check:", user?.id ? "Found" : "Null");
 
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
-        <UserProvider initialUser={user}>{children}</UserProvider>
+        <UserProvider initialAuthUser={user}>{children}</UserProvider>
       </body>
     </html>
   );
