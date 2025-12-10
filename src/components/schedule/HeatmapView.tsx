@@ -23,23 +23,37 @@ export function HeatmapView({
         const date = addMinutes(startOfDay(new Date()), i * 30);
         return format(date, "HH:mm");
     });
+    console.log("availabilities", availabilities);
 
-    const getSlotColor = (count: number) => {
-        if (count === 0) return "bg-muted/30";
-        if (count === totalParticipants) return "bg-blue-500 text-white"; // Distinct color for all available
+    const getSlotStyle = (count: number) => {
+        if (count === 0) return { className: "bg-muted/30" };
+        if (count === totalParticipants) return { className: "bg-blue-500 text-white" };
 
-        // Calculate lightness/opacity based on count (0 to n-1)
-        // We want higher count = darker green
-        // Scale: 1 to n-1
-        const maxScale = Math.max(1, totalParticipants - 1);
-        const intensity = count / maxScale;
+        // For counts between 1 and n-1
+        // Interpolate between Yellow (approx Hue 45) and Green (approx Hue 120)
+        // We want 1 -> Yellow, (n-1) -> Green
 
-        // Using opacity for simplicity with a base green color
-        // Or we can use specific shades. Let's use opacity on a green base.
-        // Minimum opacity 0.2 for 1 person
-        const opacity = 0.2 + (intensity * 0.8);
+        let hue = 120; // Default green
+        if (totalParticipants > 2) {
+            const minCount = 1;
+            const maxCount = totalParticipants - 1;
 
-        return `bg-green-500/${Math.round(opacity * 100)}`;
+            // Normalize count to 0..1 range
+            // t = 0 when count == 1
+            // t = 1 when count == maxCount
+            const t = (count - minCount) / (maxCount - minCount);
+
+            // Yellow (45) -> Green (130)
+            hue = 45 + Math.round(t * (130 - 45));
+        } else {
+            // If only 1 participants (1/2 is the only partial state), make it bg-blue-500
+            hue = 215;
+        }
+
+        return {
+            className: "",
+            style: { backgroundColor: `hsla(${hue}, 90%, 55%, 1)` }
+        };
     };
 
     return (
@@ -70,17 +84,19 @@ export function HeatmapView({
                                     {timeSlots.map((_, timeIdx) => {
                                         const count = availabilities[`${dayIdx}-${timeIdx}`] || 0;
                                         const isFull = count === totalParticipants;
+                                        const { className, style } = getSlotStyle(count);
 
                                         return (
                                             <div
                                                 key={timeIdx}
                                                 className={cn(
                                                     "h-10 flex-1 rounded-sm transition-all hover:ring-2 hover:ring-ring hover:z-10",
-                                                    getSlotColor(count),
+                                                    className,
                                                     isFull && "shadow-md ring-1 ring-blue-600",
                                                     // Add borders for hour markers
                                                     timeIdx % 2 === 1 && "mr-[1px] border-r border-border/50"
                                                 )}
+                                                style={style}
                                                 title={`${count}/${totalParticipants} available`}
                                             >
                                                 {/* Optional: Show count on hover or always if space permits */}
@@ -101,12 +117,17 @@ export function HeatmapView({
                         <span>0/{totalParticipants}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded bg-green-500/30" />
-                        <span>1/{totalParticipants}</span>
+                        <div className="h-4 w-4 rounded" style={{ backgroundColor: 'hsla(45, 90%, 55%, 1)' }} />
+                        <span>1/{totalParticipants} (Low)</span>
                     </div>
+                    {totalParticipants > 2 && (
+                        <div className="flex items-center gap-2">
+                            <div className="h-1 w-8 rounded-full bg-gradient-to-r from-[hsl(45,90%,55%)] to-[hsl(130,90%,55%)]" />
+                        </div>
+                    )}
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded bg-green-500" />
-                        <span>{totalParticipants - 1}/{totalParticipants}</span>
+                        <div className="h-4 w-4 rounded" style={{ backgroundColor: 'hsla(130, 90%, 55%, 1)' }} />
+                        <span>{Math.max(1, totalParticipants - 1)}/{totalParticipants} (High)</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="h-4 w-4 rounded bg-blue-500 shadow-sm" />

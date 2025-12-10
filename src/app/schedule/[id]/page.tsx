@@ -7,7 +7,7 @@ import { ButtonHTMLAttributes, useState, useEffect, use } from "react";
 import { Copy, Check, Users, Clock, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { readSchedule, saveAvailability, updateSchedule } from "@/services/ScheduleProvider";
+import { readSchedule, saveAvailability, updateSchedule, getRelatedAvailabilities } from "@/services/ScheduleProvider";
 import { eachDayOfInterval } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -24,6 +24,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
     const [activeTab, setActiveTab] = useState<"input" | "result">("input");
     const [isConfirmed, setIsConfirmed] = useState(false);
     const [availabilities, setAvailabilities] = useState<string[]>([]);
+    const [groupAvailabilities, setGroupAvailabilities] = useState<{ [key: string]: number }>({});
 
     const supabase = createClient();
 
@@ -113,12 +114,70 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
                 await saveAvailability(id, currentUser.id, availabilities);
                 alert("Availability saved successfully!");
+                await fetchGroupAvailabilities();
             }
         } catch (error: any) {
             console.error("Error saving:", error);
             alert(error.message || "Failed to save.");
         }
     };
+
+    // Convert string dates from DB back to Date objects for TimeTable
+    const scheduleDates = schedule?.dates
+        ? schedule.dates.map((d: string) => new Date(d))
+        : [];
+
+    const fetchGroupAvailabilities = async () => {
+        if (!schedule) return;
+
+        const related = await getRelatedAvailabilities(id);
+
+        const counts: { [key: string]: number } = {};
+
+        // Calculate day differencehelper
+        const getDayDiff = (dateStr: string) => {
+            // dateStr is yyyyMMdd
+            // schedule start date is schedule.dates[0] (string yyyy-MM-dd probably, but we have scheduleDates as Dates)
+            if (!scheduleDates.length) return -1;
+
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(4, 6)) - 1;
+            const day = parseInt(dateStr.substring(6, 8));
+            const targetDate = new Date(year, month, day);
+
+            // Normalize start date to midnight just in case
+            const startDate = new Date(scheduleDates[0]);
+            startDate.setHours(0, 0, 0, 0);
+
+            const diffTime = targetDate.getTime() - startDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        };
+
+        related.forEach((avail: any) => {
+            if (avail.selected_times) {
+                avail.selected_times.forEach((timeStr: string) => {
+                    // timeStr: yyyyMMdd-timeIdx
+                    const [datePart, timePart] = timeStr.split('-');
+                    const timeIdx = parseInt(timePart);
+                    const dayIdx = getDayDiff(datePart);
+
+                    if (dayIdx >= 0) {
+                        const key = `${dayIdx}-${timeIdx}`;
+                        counts[key] = (counts[key] || 0) + 1;
+                    }
+                });
+            }
+        });
+
+        setGroupAvailabilities(counts);
+    };
+
+    useEffect(() => {
+        if (schedule) {
+            fetchGroupAvailabilities();
+        }
+    }, [schedule]);
 
     if (isLoading) {
         return (
@@ -139,11 +198,6 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
             </div>
         );
     }
-
-    // Convert string dates from DB back to Date objects for TimeTable
-    const scheduleDates = schedule.dates
-        ? schedule.dates.map((d: string) => new Date(d))
-        : [];
 
     return (
         <main className="min-h-screen bg-background p-4 sm:p-8">
@@ -269,33 +323,35 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                     startDate={scheduleDates[0]}
                                     endDate={scheduleDates[scheduleDates.length - 1]}
                                     totalParticipants={schedule.participants_id?.length || 0}
-                                    availabilities={{}} // FixMe: Handle Mock availabilities or fetch real ones
+                                    availabilities={groupAvailabilities}
                                 />
 
-                                {/* Creator Actions */}
-                                <div className="rounded-xl border bg-card p-6 shadow-sm">
-                                    <h3 className="text-lg font-semibold">Finalize Schedule</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Select a time slot on the heatmap above and confirm to notify everyone.
-                                    </p>
-                                    <div className="mt-4 flex justify-end">
-                                        <button
-                                            onClick={handleConfirm}
-                                            disabled={isConfirmed}
-                                            className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                        >
-                                            <Bell className="h-4 w-4" />
-                                            {isConfirmed ? "Schedule Confirmed" : "Confirm & Notify"}
-                                        </button>
+                                {/* Creator Actions - Only show if current user is creator */}
+                                {schedule?.creator_id === currentUser?.id && (
+                                    <div className="rounded-xl border bg-card p-6 shadow-sm">
+                                        <h3 className="text-lg font-semibold">Finalize Schedule</h3>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Select a time slot on the heatmap above and confirm to notify everyone.
+                                        </p>
+                                        <div className="mt-4 flex justify-end">
+                                            <button
+                                                onClick={handleConfirm}
+                                                disabled={isConfirmed}
+                                                className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                            >
+                                                <Bell className="h-4 w-4" />
+                                                {isConfirmed ? "Schedule Confirmed" : "Confirm & Notify"}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             <div className="lg:col-span-1">
                                 <BestTimeList
                                     startDate={scheduleDates[0]}
                                     totalParticipants={schedule.participants_id?.length || 0}
-                                    availabilities={{}} // FixMe: Handle Mock availabilities or fetch real ones
+                                    availabilities={groupAvailabilities}
                                 />
                             </div>
                         </div>

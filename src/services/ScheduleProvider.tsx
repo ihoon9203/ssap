@@ -268,6 +268,19 @@ export const saveAvailability = async (
 
 };
 
+export const getRelatedAvailabilities = async (scheduleId: string) => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("availabilities")
+        .select("*")
+        .eq("schedule_id", scheduleId);
+    if (error) {
+        console.error("Error getting related availabilities:", error);
+        return [];
+    }
+    return data;
+};
+
 export const useSchedule = () => {
     const context = useContext(ScheduleContext);
     if (context === undefined) {

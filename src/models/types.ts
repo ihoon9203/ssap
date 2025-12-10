@@ -21,7 +21,6 @@ export interface Schedule {
     confirmed_start_time?: string;
     confirmed_end_time?: string;
     participants_id?: string[]; // Array of UUIDs
-    availabilities_id?: string[]; // Array of UUIDs
     dates?: string[]; // Array of strings (YYYY-MM-DD)
     available_time?: string[]; // Array of strings (YYYYMMDD-HH:mm) representing the valid slots defined by creator
 }
