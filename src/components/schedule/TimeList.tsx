@@ -3,17 +3,21 @@
 import { format, addMinutes, startOfDay } from "date-fns";
 import { Star, Users } from "lucide-react";
 
-interface BestTimeListProps {
+interface TimeListProps {
     startDate: Date;
     totalParticipants: number;
     availabilities: { [key: string]: number };
+    selectedAvailabilities: Set<string>,
+    onScheduleSelect: (schedule: string[]) => void
 }
 
-export function BestTimeList({
+export function TimeList({
     startDate,
     totalParticipants,
     availabilities,
-}: BestTimeListProps) {
+    selectedAvailabilities,
+    onScheduleSelect
+}: TimeListProps) {
     // Logic to find best times (consecutive slots with high availability)
     // For now, just find top 3 single slots or simple ranges
 
@@ -97,10 +101,33 @@ export function BestTimeList({
                             ? `${durationMinutes / 60} hr${durationMinutes > 60 ? 's' : ''}`
                             : `${durationMinutes} min`;
 
+                        // Generate all keys in this group to check selection
+                        const groupKeys: string[] = [];
+                        const dateStr = format(date, "yyyyMMdd");
+
+                        for (let t = group.startTimeIdx; t <= group.endTimeIdx; t++) {
+                            groupKeys.push(`${dateStr}-${t}`);
+                        }
+                        console.log('groupKeys', groupKeys);
+
+                        // Check if this group is currently selected
+                        // (Multi-select support: check if all keys in this group are present in selectedAvailabilities)
+                        const isSelected = groupKeys.length > 0 && groupKeys.every(k => selectedAvailabilities.has(k));
+
                         return (
-                            <div key={i} className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                            <div
+                                key={i}
+                                onClick={() => onScheduleSelect(groupKeys)}
+                                className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${isSelected
+                                    ? "bg-primary/10 border-primary shadow-sm"
+                                    : "hover:bg-muted/50"
+                                    }`}
+                            >
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-mono text-sm font-bold">
+                                    <div className={`flex h-8 w-8 items-center justify-center rounded-full font-mono text-sm font-bold ${isSelected
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted"
+                                        }`}>
                                         {i + 1}
                                     </div>
                                     <div>
@@ -115,7 +142,7 @@ export function BestTimeList({
                                 <div className="flex items-center gap-1.5">
                                     <Users className="h-4 w-4 text-muted-foreground" />
                                     <span className={isFull ? "font-bold text-blue-600" : "font-medium"}>
-                                        {group.count}/{totalParticipants}
+                                        {group.count + 1}/{totalParticipants}
                                     </span>
                                 </div>
                             </div>

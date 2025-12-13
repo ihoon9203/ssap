@@ -33,7 +33,8 @@ export function UserProvider({
 }) {
     const [user, setUser] = useState<User | null>(initialUser || null);
     const [authUser, setAuthUser] = useState<AuthUser | null>(initialAuthUser || null);
-    const [isLoading, setIsLoading] = useState(!initialUser && !initialAuthUser);
+    // If we don't have the initial user (DB profile), we are loading.
+    const [isLoading, setIsLoading] = useState(!initialUser);
     const supabase = createClient();
 
     const fetchAndMergeProfile = async (baseUser: AuthUser) => {
@@ -98,6 +99,8 @@ export function UserProvider({
                 updated_at: new Date().toISOString(),
             };
             setUser(tempUser);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -109,14 +112,30 @@ export function UserProvider({
     };
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        setIsLoading(true); // Show loading during sign out
+        // Optimistically clear local state immediately so UI reacts
         setUser(null);
         setAuthUser(null);
-        window.location.href = "/login"; // Force redirect to clear any client state/cache
+
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error("Error signing out:", error);
+        } finally {
+            window.location.href = "/login"; // Force redirect to clear any client state/cache
+        }
     };
 
     useEffect(() => {
         console.log("[UserProvider] Mount. InitialAuth:", !!initialAuthUser, "InitialDB:", !!initialUser);
+
+        // Failsafe: If still loading after 5 seconds, force stop loading to prevent blank screen
+        const timeout = setTimeout(() => {
+            if (isLoading) {
+                console.warn("[UserProvider] Loading timed out. Forcing isLoading=false.");
+                setIsLoading(false);
+            }
+        }, 5000);
 
         // Initial fetch if we have an auth user but no DB user yet
         if (initialAuthUser && !user) {
@@ -137,6 +156,10 @@ export function UserProvider({
             init();
         }
 
+        return () => clearTimeout(timeout);
+    }, []); // Only run on mount (empty dependency array) for the initial checks logic
+
+    useEffect(() => {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -145,18 +168,20 @@ export function UserProvider({
                 // If we already have the same user loaded, don't re-fetch/flash
                 // But we need to ensure profile is merged.
                 // We'll trust the logic for now, but log it.
-                await fetchAndMergeProfile(session.user);
+                if (session.user.id !== authUser?.id) {
+                    await fetchAndMergeProfile(session.user);
+                }
             } else {
                 setUser(null);
                 setAuthUser(null);
+                setIsLoading(false);
             }
-            setIsLoading(false);
         });
 
         return () => {
             subscription.unsubscribe();
         };
-    }, [supabase]);
+    }, [supabase, authUser]);
 
     return (
         <UserContext.Provider value={{ user, authUser, isLoading, refreshUser, signOut }}>

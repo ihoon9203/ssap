@@ -2,12 +2,12 @@
 
 import { TimeTable } from "@/components/schedule/TimeTable";
 import { HeatmapView } from "@/components/schedule/HeatmapView";
-import { BestTimeList } from "@/components/schedule/BestTimeList";
+import { TimeList } from "@/components/schedule/TimeList";
 import { ButtonHTMLAttributes, useState, useEffect, use } from "react";
 import { Copy, Check, Users, Clock, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { readSchedule, saveAvailability, updateSchedule, getRelatedAvailabilities } from "@/services/ScheduleProvider";
+import { readSchedule, saveAvailability, updateSchedule, getRelatedAvailabilities, setScheduleStatus, confirmSchedule } from "@/services/ScheduleProvider";
 import { eachDayOfInterval } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -25,6 +25,8 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
     const [isConfirmed, setIsConfirmed] = useState(false);
     const [availabilities, setAvailabilities] = useState<string[]>([]);
     const [groupAvailabilities, setGroupAvailabilities] = useState<{ [key: string]: number }>({});
+    const [selectedAvailabilities, setSelectedAvailabilities] = useState<Set<string>>(new Set());
+    const confirmedAvailabilities = new Set<string>(schedule?.confirmed_schedules ?? []);
 
     const supabase = createClient();
 
@@ -61,6 +63,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             .single();
                         if (data) {
                             setAvailabilities(data.selected_times);
+                            setSelectedAvailabilities(data.confirmed_schedules);
                         }
                     }
                 } else {
@@ -88,13 +91,13 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
     const handleConfirm = async () => {
         if (!confirm("Are you sure you want to confirm this schedule? This will notify all participants.")) return;
-
-        // Mock notification logic
-        console.log("Sending Discord notification...");
-        console.log("Sending Kakao notification...");
-
-        setIsConfirmed(true);
-        alert("Schedule confirmed! Notifications sent.");
+        const { data, error } = await confirmSchedule(id, Array.from(selectedAvailabilities));
+        if (data) {
+            setIsConfirmed(true);
+            alert("Schedule confirmed! Notifications sent.");
+        } else {
+            alert(error?.message || "Failed to confirm schedule.");
+        }
     };
 
     const handleSaveAvailability = async () => {
@@ -120,6 +123,29 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
             console.error("Error saving:", error);
             alert(error.message || "Failed to save.");
         }
+    };
+
+    const handleScheduleSelect = (groupKeys: string[]) => {
+        setSelectedAvailabilities(prev => {
+            // Check if all keys in the new group are already selected
+            const allSelected = groupKeys.every(key => prev.has(key));
+
+            if (allSelected) {
+                // If already selected, deselect them (remove from array)
+                const newSet = new Set(prev);
+
+                // 2. 제거할 키들을 순회하며 Set에서 삭제합니다.
+                groupKeys.forEach(key => {
+                    newSet.delete(key);
+                });
+
+                return newSet;
+            } else {
+                // If not (or partially) selected, select them (merged with existing)
+                // Use Set to ensure uniqueness
+                return new Set([...prev, ...groupKeys]);
+            }
+        });
     };
 
     // Convert string dates from DB back to Date objects for TimeTable
@@ -172,6 +198,10 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
         setGroupAvailabilities(counts);
     };
+
+    const eqSet = (xs: Set<string>, ys: Set<string>) =>
+        xs.size === ys.size &&
+        [...xs].every((x) => ys.has(x));
 
     useEffect(() => {
         if (schedule) {
@@ -336,11 +366,11 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                         <div className="mt-4 flex justify-end">
                                             <button
                                                 onClick={handleConfirm}
-                                                disabled={isConfirmed}
+                                                disabled={eqSet(selectedAvailabilities, confirmedAvailabilities)}
                                                 className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                                             >
                                                 <Bell className="h-4 w-4" />
-                                                {isConfirmed ? "Schedule Confirmed" : "Confirm & Notify"}
+                                                Confirm & Notify
                                             </button>
                                         </div>
                                     </div>
@@ -348,10 +378,12 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             </div>
 
                             <div className="lg:col-span-1">
-                                <BestTimeList
+                                <TimeList
                                     startDate={scheduleDates[0]}
                                     totalParticipants={schedule.participants_id?.length || 0}
                                     availabilities={groupAvailabilities}
+                                    selectedAvailabilities={selectedAvailabilities}
+                                    onScheduleSelect={handleScheduleSelect}
                                 />
                             </div>
                         </div>

@@ -320,3 +320,25 @@ export const joinSchedule = async (scheduleId: string, userId: string) => {
     console.log("RPC result:", data);
     return data;
 };
+
+export const setScheduleStatus = async (scheduleId: string, newStatus: string) => {
+    const supabase = createClient();
+    console.log("Confirming schedule via RPC:", scheduleId);
+
+    const { data, error } = await supabase
+        .rpc('set_status', { schedule_id: scheduleId, new_status: newStatus });
+
+    console.log("RPC result:", data);
+    return { data, error };
+}
+
+export const confirmSchedule = async (scheduleId: string, schedule_list: string[]) => {
+    const supabase = createClient();
+    console.log("Confirming schedule via RPC:", scheduleId);
+
+    const { data, error } = await supabase
+        .rpc('confirm_schedule_times', { schedule_id_input: scheduleId, confirmed_schedule_list: schedule_list });
+
+    console.log("RPC result:", data);
+    return { data, error };
+}

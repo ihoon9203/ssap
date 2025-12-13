@@ -18,8 +18,7 @@ export interface Schedule {
     end_date: string;
     invite_code?: string;
     status: 'pending' | 'confirmed' | 'aborted' | string;
-    confirmed_start_time?: string;
-    confirmed_end_time?: string;
+    confirm_schedules?: string[];
     participants_id?: string[]; // Array of UUIDs
     dates?: string[]; // Array of strings (YYYY-MM-DD)
     available_time?: string[]; // Array of strings (YYYYMMDD-HH:mm) representing the valid slots defined by creator

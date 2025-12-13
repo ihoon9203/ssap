@@ -7,7 +7,7 @@ import { Pencil, Check, X, Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function UserEditor() {
-    const { user, authUser, refreshUser, signOut } = useUser();
+    const { user, authUser, refreshUser, signOut, isLoading } = useUser();
     const [isEditing, setIsEditing] = useState(false);
     const [newName, setNewName] = useState(user?.username || authUser?.user_metadata?.full_name || "");
     const [isSaving, setIsSaving] = useState(false);
@@ -157,10 +157,11 @@ export function UserEditor() {
                         signOut();
                     }
                 }}
-                className="flex h-10 w-10 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-destructive"
+                disabled={isLoading}
+                className="flex h-10 w-10 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-destructive disabled:opacity-50"
                 title="Log out"
             >
-                <LogOut className="h-4 w-4" />
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
             </button>
         </div>
     );
