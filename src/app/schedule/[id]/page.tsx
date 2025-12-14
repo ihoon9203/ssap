@@ -46,6 +46,11 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                 if (data) {
                     setSchedule(data);
 
+                    // Initialize selected availabilities from Schedule
+                    if (data.confirmed_schedules) {
+                        setSelectedAvailabilities(new Set(data.confirmed_schedules));
+                    }
+
                     // Determine Role
                     if (currentUser && data.creator_id === currentUser.id) {
                         setIsCreator(true);
@@ -63,7 +68,6 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             .single();
                         if (data) {
                             setAvailabilities(data.selected_times);
-                            setSelectedAvailabilities(data.confirmed_schedules);
                         }
                     }
                 } else {
@@ -382,7 +386,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                     startDate={scheduleDates[0]}
                                     totalParticipants={schedule.participants_id?.length || 0}
                                     availabilities={groupAvailabilities}
-                                    selectedAvailabilities={selectedAvailabilities}
+                                    selectedAvailabilities={new Set(selectedAvailabilities)}
                                     onScheduleSelect={handleScheduleSelect}
                                 />
                             </div>

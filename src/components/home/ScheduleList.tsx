@@ -2,7 +2,7 @@
 
 import { Calendar, Clock, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, groupAdjacentSlots, slotToTime } from "@/lib/utils";
 import { ko } from "date-fns/locale";
 
 // Mock data type
@@ -53,7 +53,20 @@ export function ScheduleList({ schedules }: { schedules: ScheduleWithDetails[] }
                             )}
                         </div>
                         <div>
-                            <h3 className="font-semibold">{schedule.title}</h3>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                <h3 className="font-semibold">{schedule.title}</h3>
+                                <span className="inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                                    {schedule.participants_id?.length ?? 0 + 1} Participants
+                                </span>
+                                {groupAdjacentSlots(schedule.confirmed_schedules ?? []).map((date) => (
+                                    <span
+                                        key={date.toString()}
+                                        className="inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                                    >
+                                        {date}
+                                    </span>
+                                ))}
+                            </div>
                             <div className="flex flex-wrap gap-1 mt-1">
                                 {schedule.dates && schedule.dates.length > 0 ? (
                                     <>
