@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
 import { formatDate, eachDayOfInterval, addMinutes, startOfDay } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -28,12 +28,12 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
     // dates prop is used directly instead of generating from interval
 
     // Generate 30-min intervals for 24 hours (48 slots)
-    const timeSlots = Array.from({ length: 48 }, (_, i) => {
+    const timeSlots = useMemo(() => Array.from({ length: 48 }, (_, i) => {
         const date = addMinutes(startOfDay(new Date()), i * 30);
         return formatDate(date, "HH:mm");
-    });
+    }), []);
 
-    const getSelectionBox = () => {
+    const getSelectionBox = useCallback(() => {
         if (!dragStart || !dragCurrent) return null;
 
         const minDay = Math.min(dragStart.dayIdx, dragCurrent.dayIdx);
@@ -45,7 +45,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
         const endDateStr = formatDate(dates[maxDay], "yyyyMMdd");
 
         return { minDay, maxDay, minTime, maxTime, startDateStr, endDateStr };
-    };
+    }, [dragStart, dragCurrent, dates]);
 
     // Calculate overlay position
     useLayoutEffect(() => {
@@ -82,9 +82,9 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                 height,
             });
         }
-    }, [isDragging, dragStart, dragCurrent]);
+    }, [isDragging, dragStart, dragCurrent, getSelectionBox]);
 
-    const handleMouseDown = (dayIdx: number, timeIdx: number) => {
+    const handleMouseDown = useCallback((dayIdx: number, timeIdx: number) => {
         const key = `${formatDate(dates[dayIdx], "yyyyMMdd")}-${timeIdx}`;
 
         // Check constraint
@@ -95,15 +95,19 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
         setDragCurrent({ dayIdx, timeIdx });
 
         // Determine if we are selecting or deselecting based on the start cell
+        // Accessing state directly inside callback - make sure dependencies are correct
+        // But since we need current selectedSlots, adding it to dependencies.
+        // This will update the function ref when selectedSlots changes.
+        // Since selectedSlots only changes on MouseUp, this reference is stable DURING drag.
         setIsSelecting(!selectedSlots.has(key));
-    };
+    }, [dates, allowedSlots, selectedSlots]);
 
-    const handleMouseEnter = (dayIdx: number, timeIdx: number) => {
+    const handleMouseEnter = useCallback((dayIdx: number, timeIdx: number) => {
         if (!isDragging) return;
         setDragCurrent({ dayIdx, timeIdx });
-    };
+    }, [isDragging]);
 
-    const handleMouseUp = () => {
+    const handleMouseUp = useCallback(() => {
         if (!isDragging || !dragStart || !dragCurrent) {
             setIsDragging(false);
             setDragStart(null);
@@ -115,8 +119,6 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
         const box = getSelectionBox();
         if (box) {
             const newSlots = new Set(selectedSlots);
-            const startDate = dates[box.minDay];
-            const endDate = dates[box.maxDay];
 
             for (let d = box.minDay; d <= box.maxDay; d++) {
                 for (let t = box.minTime; t <= box.maxTime; t++) {
@@ -146,14 +148,67 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
         setDragStart(null);
         setDragCurrent(null);
         setOverlayStyle(null);
-    };
+    }, [isDragging, dragStart, dragCurrent, getSelectionBox, selectedSlots, allowedSlots, isSelecting, onChange, dates]);
 
     useEffect(() => {
         window.addEventListener("mouseup", handleMouseUp);
         return () => window.removeEventListener("mouseup", handleMouseUp);
-    }, [isDragging, dragStart, dragCurrent]);
+    }, [handleMouseUp]);
 
-    const selectionBox = getSelectionBox();
+    const gridContent = useMemo(() => (
+        <div className="space-y-2">
+            {dates.map((day, dayIdx) => (
+                <div key={day.toString()} className="flex items-center gap-4">
+                    {/* Date Label */}
+                    <div className="w-28 flex-shrink-0 text-sm font-medium">
+                        {formatDate(day, "EEE, MMM d")}
+                    </div>
+
+                    {/* Time Grid */}
+                    <div className="flex flex-1 gap-[2px]">
+                        {timeSlots.map((_, timeIdx) => {
+                            const key = `${formatDate(day, "yyyyMMdd")}-${timeIdx}`;
+                            const isSelected = selectedSlots.has(key);
+                            const isDisabled = allowedSlots && !allowedSlots.includes(key);
+
+                            // Removed isInBox logic to defer selection visual to overlay only
+
+                            const isHourEnd = timeIdx % 2 === 1;
+
+                            return (
+                                <div
+                                    key={timeIdx}
+                                    data-day={dayIdx}
+                                    data-time={timeIdx}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        if (!isDisabled) handleMouseDown(dayIdx, timeIdx);
+                                    }}
+                                    onMouseEnter={() => {
+                                        if (!isDisabled) handleMouseEnter(dayIdx, timeIdx);
+                                    }}
+                                    className={cn(
+                                        "h-10 flex-1 rounded-sm transition-all hover:ring-2 hover:ring-ring hover:z-10",
+                                        isDisabled
+                                            ? "bg-gray-200 dark:bg-gray-800 cursor-not-allowed" // Disabled style
+                                            : "cursor-pointer",
+                                        !isDisabled && (isSelected ? "bg-primary" : "bg-muted/30 hover:bg-primary/10"),
+                                        // Hour markers
+                                        isHourEnd && "mr-[1px] border-r border-border/50"
+                                    )}
+                                    title={
+                                        isDisabled
+                                            ? "Unavailable"
+                                            : `${formatDate(day, "M월 d일")} ${timeSlots[timeIdx]}`
+                                    }
+                                />
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+        </div>
+    ), [dates, timeSlots, selectedSlots, allowedSlots, handleMouseDown, handleMouseEnter]);
 
     return (
         <div className="relative w-full overflow-hidden rounded-xl border bg-card shadow-sm select-none">
@@ -162,7 +217,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                     {/* Overlay */}
                     {overlayStyle && (
                         <div
-                            className="absolute z-20 rounded-md border border-primary bg-primary/20 pointer-events-none transition-all duration-75"
+                            className="absolute z-20 rounded-md border border-blue-500 bg-blue-500/30 pointer-events-none transition-all duration-75"
                             style={overlayStyle}
                         />
                     )}
@@ -178,73 +233,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                     </div>
 
                     {/* Rows */}
-                    <div className="space-y-2">
-                        {dates.map((day, dayIdx) => (
-                            <div key={day.toString()} className="flex items-center gap-4">
-                                {/* Date Label */}
-                                <div className="w-28 flex-shrink-0 text-sm font-medium">
-                                    {formatDate(day, "EEE, MMM d")}
-                                </div>
-
-                                {/* Time Grid */}
-                                <div className="flex flex-1">
-                                    {timeSlots.map((_, timeIdx) => {
-                                        const key = `${formatDate(day, "yyyyMMdd")}-${timeIdx}`;
-                                        const isSelected = selectedSlots.has(key);
-                                        const isDisabled = allowedSlots && !allowedSlots.includes(key);
-
-                                        let isInBox = false;
-                                        if (isDragging && selectionBox) {
-                                            isInBox =
-                                                dayIdx >= selectionBox.minDay &&
-                                                dayIdx <= selectionBox.maxDay &&
-                                                timeIdx >= selectionBox.minTime &&
-                                                timeIdx <= selectionBox.maxTime;
-                                        }
-
-                                        // Prevent visual selection if disabled
-                                        if (isDisabled) isInBox = false;
-
-                                        const visualSelected = isInBox ? isSelecting : isSelected;
-                                        const isHourEnd = timeIdx % 2 === 1;
-
-                                        return (
-                                            <div
-                                                key={timeIdx}
-                                                data-day={dayIdx}
-                                                data-time={timeIdx}
-                                                onMouseDown={(e) => {
-                                                    e.preventDefault();
-                                                    if (!isDisabled) handleMouseDown(dayIdx, timeIdx);
-                                                }}
-                                                onMouseEnter={() => {
-                                                    if (!isDisabled) handleMouseEnter(dayIdx, timeIdx);
-                                                }}
-                                                className={cn(
-                                                    "h-10 flex-1 transition-colors border-r border-border/20",
-                                                    isDisabled
-                                                        ? "bg-gray-200 dark:bg-gray-800 cursor-not-allowed" // Disabled style
-                                                        : "cursor-pointer",
-                                                    !isDisabled && (visualSelected ? "bg-primary" : "bg-muted/30 hover:bg-primary/10"),
-                                                    // Stronger divider for hour ends
-                                                    isHourEnd && "border-r-border/60",
-                                                    // First item rounded left
-                                                    timeIdx === 0 && "rounded-l-sm",
-                                                    // Last item rounded right and no border
-                                                    timeIdx === timeSlots.length - 1 && "rounded-r-sm border-r-0"
-                                                )}
-                                                title={
-                                                    isDisabled
-                                                        ? "Unavailable"
-                                                        : `${formatDate(day, "M월 d일")} ${timeSlots[timeIdx]}`
-                                                }
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    {gridContent}
                 </div>
             </div>
 
