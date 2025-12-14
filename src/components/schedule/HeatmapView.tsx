@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 interface HeatmapViewProps {
     startDate: Date;
     endDate: Date;
+    creatorAvailableTimes: string[];
     totalParticipants: number;
     availabilities: { [key: string]: number }; // key: "dayIdx-timeIdx", value: count
 }
@@ -13,6 +14,7 @@ interface HeatmapViewProps {
 export function HeatmapView({
     startDate,
     endDate,
+    creatorAvailableTimes = [],
     totalParticipants,
     availabilities,
 }: HeatmapViewProps) {
@@ -25,8 +27,15 @@ export function HeatmapView({
     });
     console.log("availabilities", availabilities);
 
-    const getSlotStyle = (count: number) => {
-        if (count === 0) return { className: "bg-muted/30" };
+    const getSlotStyle = (count: number, isCreatorAvailable: boolean) => {
+        if (count === 0) {
+            if (isCreatorAvailable) {
+                // Available but not selected: Darker gray
+                return { className: "bg-gray-400" };
+            }
+            // Not available at all: Lighter gray
+            return { className: "bg-muted/20" };
+        }
         if (count === totalParticipants) return { className: "bg-blue-500 text-white" };
 
         // For counts between 1 and n-1
@@ -84,7 +93,12 @@ export function HeatmapView({
                                     {timeSlots.map((_, timeIdx) => {
                                         const count = availabilities[`${dayIdx}-${timeIdx}`] || 0;
                                         const isFull = count === totalParticipants;
-                                        const { className, style } = getSlotStyle(count);
+
+                                        // Check creator availability
+                                        const searchKey = `${format(day, "yyyyMMdd")}-${timeIdx}`;
+                                        const isCreatorAvailable = creatorAvailableTimes.includes(searchKey);
+
+                                        const { className, style } = getSlotStyle(count, isCreatorAvailable);
 
                                         return (
                                             <div
@@ -92,12 +106,13 @@ export function HeatmapView({
                                                 className={cn(
                                                     "h-10 flex-1 rounded-sm transition-all hover:ring-2 hover:ring-ring hover:z-10",
                                                     className,
-                                                    isFull && "shadow-md ring-1 ring-blue-600",
+                                                    // isFull && "shadow-md ring-1 ring-blue-600",
                                                     // Add borders for hour markers
-                                                    timeIdx % 2 === 1 && "mr-[1px] border-r border-border/50"
+                                                    timeIdx % 2 === 1 && "mr-[1px] border-r",
+                                                    timeIdx % 2 === 1 && (count > 0 ? "border-border/50" : "border-transparent")
                                                 )}
                                                 style={style}
-                                                title={`${count}/${totalParticipants} available`}
+                                                title={`${count}/${totalParticipants} available${!isCreatorAvailable ? ' (Closed)' : ''}`}
                                             >
                                                 {/* Optional: Show count on hover or always if space permits */}
                                             </div>

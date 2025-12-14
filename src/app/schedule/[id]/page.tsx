@@ -7,17 +7,16 @@ import { ButtonHTMLAttributes, useState, useEffect, use } from "react";
 import { Copy, Check, Users, Clock, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { readSchedule, saveAvailability, updateSchedule, getRelatedAvailabilities, setScheduleStatus, confirmSchedule } from "@/services/ScheduleProvider";
+import { readSchedule, saveAvailability, updateSchedule, getRelatedAvailabilities, setScheduleStatus, confirmSchedule, readScheduleWithRpc, UserData } from "@/services/ScheduleProvider";
 import { eachDayOfInterval } from "date-fns";
-import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client"; import { User } from "@supabase/supabase-js";
 
 export default function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const [schedule, setSchedule] = useState<any | null>(null); // Use proper type if available
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null | undefined>(undefined);
     const [isCreator, setIsCreator] = useState(false);
 
     const [copied, setCopied] = useState(false);
@@ -26,6 +25,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
     const [availabilities, setAvailabilities] = useState<string[]>([]);
     const [groupAvailabilities, setGroupAvailabilities] = useState<{ [key: string]: number }>({});
     const [selectedAvailabilities, setSelectedAvailabilities] = useState<Set<string>>(new Set());
+    const [members, setMembers] = useState<UserData[]>([]);
     const confirmedAvailabilities = new Set<string>(schedule?.confirmed_schedules ?? []);
 
     const supabase = createClient();
@@ -42,21 +42,22 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
         const fetchSchedule = async () => {
             try {
                 setIsLoading(true);
-                const data = await readSchedule(id);
+                const data = await readScheduleWithRpc(id);
                 if (data) {
-                    setSchedule(data);
+                    setSchedule(data.schedule);
+                    setMembers([data.creator, ...data.participants]);
 
                     // Initialize selected availabilities from Schedule
-                    if (data.confirmed_schedules) {
-                        setSelectedAvailabilities(new Set(data.confirmed_schedules));
+                    if (data.schedule.confirmed_schedules) {
+                        setSelectedAvailabilities(new Set(data.schedule.confirmed_schedules));
                     }
 
                     // Determine Role
-                    if (currentUser && data.creator_id === currentUser.id) {
+                    if (currentUser && data.creator.id === currentUser.id) {
                         setIsCreator(true);
                         // Creator starts with the schedule's available times
-                        if (data.available_time) {
-                            setAvailabilities(data.available_time);
+                        if (data.schedule.available_time) {
+                            setAvailabilities(data.schedule.available_time);
                         }
                     } else if (currentUser) {
                         // select my availability if exist only
@@ -67,12 +68,13 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             .eq('schedule_id', id)
                             .single();
                         if (data) {
-                            setAvailabilities(data.selected_times);
+                            setAvailabilities(data.schedule.selected_times);
                         }
                     }
                 } else {
                     setError("Schedule not found");
                 }
+
             } catch (err: any) {
                 setError(err.message || "Failed to load schedule");
             } finally {
@@ -326,6 +328,9 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
                 {/* Content */}
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div>
+                        이거 됨?
+                    </div>
                     {activeTab === "input" ? (
                         <div className="space-y-6">
                             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
@@ -357,6 +362,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                     startDate={scheduleDates[0]}
                                     endDate={scheduleDates[scheduleDates.length - 1]}
                                     totalParticipants={schedule.participants_id?.length || 0}
+                                    creatorAvailableTimes={schedule.available_time}
                                     availabilities={groupAvailabilities}
                                 />
 
@@ -384,7 +390,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             <div className="lg:col-span-1">
                                 <TimeList
                                     startDate={scheduleDates[0]}
-                                    totalParticipants={schedule.participants_id?.length || 0}
+                                    totalParticipants={schedule.participants_id?.length || 1}
                                     availabilities={groupAvailabilities}
                                     selectedAvailabilities={new Set(selectedAvailabilities)}
                                     onScheduleSelect={handleScheduleSelect}

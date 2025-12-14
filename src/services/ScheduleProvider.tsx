@@ -11,6 +11,22 @@ interface ScheduleContextType {
     refreshSchedule: () => Promise<void>;
 }
 
+export interface UserData {
+    id: string;
+    updated_at: string;
+    username: string;
+    real_name: string;
+    avatar_url: string;
+    nickname: string;
+    schdules: string;
+}
+
+export interface ScheduleData {
+    schedule: Schedule;
+    creator: UserData;
+    participants: UserData[]; // 이미 [User] 배열로 요청하셨으므로
+}
+
 const ScheduleContext = createContext<ScheduleContextType>({
     schedule: null,
     isLoading: true,
@@ -342,3 +358,23 @@ export const confirmSchedule = async (scheduleId: string, schedule_list: string[
     console.log("RPC result:", data);
     return { data, error };
 }
+
+export const readScheduleWithRpc = async (scheduleId: string): Promise<ScheduleData | null> => {
+    const supabase = createClient();
+
+    const { data, error } = await supabase.rpc(
+        "get_schedule_with_users", // 1단계에서 정의한 함수 이름
+        { schedule_id: scheduleId } // 함수에 전달할 인자
+    ).single(); // 단일 결과를 기대
+    console.log(data);
+
+    if (error) {
+        console.error("Error calling get_schedule_with_users:", error);
+        return null;
+    }
+
+    // 결과는 { schedule: {...}, creator: {...}, participants: [...] } 형식입니다.
+    // 하지만, rpc의 결과는 JSONB로 반환되므로 타입스크립트에서 사용 시 타입 변환이 필요할 수 있습니다.
+    // data는 ScheduleData 타입의 객체가 됩니다.
+    return data as ScheduleData;
+};

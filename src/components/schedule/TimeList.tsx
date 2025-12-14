@@ -79,7 +79,7 @@ export function TimeList({
         <div className="rounded-xl border bg-card p-6 shadow-sm">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                 <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                Best Times
+                시간대 추천 리스트
             </h3>
 
             <div className="space-y-3">
