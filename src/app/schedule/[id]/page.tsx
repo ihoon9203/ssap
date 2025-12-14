@@ -235,6 +235,10 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
         );
     }
 
+    function getUserAvatar(): import("react").ReactNode {
+        throw new Error("Function not implemented.");
+    }
+
     return (
         <main className="min-h-screen bg-background p-4 sm:p-8">
             <div className="mx-auto max-w-6xl space-y-8">
@@ -328,9 +332,22 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
                 {/* Content */}
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div>
-                        이거 됨?
+                    <div className="pb-4">
+                        <div className="flex flex-wrap gap-2">
+                            {members.map((member) => (
+                                <div className="flex items-center gap-2">
+                                    <div
+                                        className="group flex items-center gap-3 rounded-full border bg-background px-5 py-2.5 text-base font-medium shadow-sm transition-colors hover:bg-muted"
+                                        title="Edit name"
+                                    >
+                                        <img src={member?.avatar_url || ''} alt="User Avatar" className="h-8 w-8 rounded-full" />
+                                        <span>{member.username}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
+
                     {activeTab === "input" ? (
                         <div className="space-y-6">
                             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
