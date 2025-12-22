@@ -9,6 +9,8 @@ interface ScheduleContextType {
     schedule: Schedule | null;
     isLoading: boolean;
     refreshSchedule: () => Promise<void>;
+    currentScheduleId: string | null;
+    setCurrentScheduleId: (id: string | null) => void;
 }
 
 export interface UserData {
@@ -31,6 +33,8 @@ const ScheduleContext = createContext<ScheduleContextType>({
     schedule: null,
     isLoading: true,
     refreshSchedule: async () => { },
+    currentScheduleId: null,
+    setCurrentScheduleId: () => { },
 });
 
 export function ScheduleProvider({
@@ -42,7 +46,25 @@ export function ScheduleProvider({
 }) {
     const [schedule, setSchedule] = useState<Schedule | null>(initialSchedule || null);
     const [isLoading, setIsLoading] = useState(!initialSchedule);
+    const [currentScheduleId, setCurrentScheduleIdState] = useState<string | null>(null);
     const supabase = createClient();
+
+    const setCurrentScheduleId = (id: string | null) => {
+        setCurrentScheduleIdState(id);
+        if (id) {
+            sessionStorage.setItem("currentScheduleId", id);
+        } else {
+            sessionStorage.removeItem("currentScheduleId");
+        }
+    };
+
+    useEffect(() => {
+        // Recover from session storage
+        const savedId = sessionStorage.getItem("currentScheduleId");
+        if (savedId) {
+            setCurrentScheduleIdState(savedId);
+        }
+    }, []);
 
     const refreshSchedule = async () => {
         // NOTE: The select query below assumes 'schedule' is a column returned in the object
@@ -95,7 +117,7 @@ export function ScheduleProvider({
     }, [supabase, refreshSchedule]); // Added refreshSchedule as a dependency, wrap in useCallback if needed.
 
     return (
-        <ScheduleContext.Provider value={{ schedule, isLoading, refreshSchedule }}>
+        <ScheduleContext.Provider value={{ schedule, isLoading, refreshSchedule, currentScheduleId, setCurrentScheduleId }}>
             {children}
         </ScheduleContext.Provider>
     );
