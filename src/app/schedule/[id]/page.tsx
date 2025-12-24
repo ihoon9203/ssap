@@ -5,7 +5,7 @@ import { HeatmapView } from "@/components/schedule/HeatmapView";
 import { TimeList } from "@/components/schedule/TimeList";
 import { ButtonHTMLAttributes, useState, useEffect, use } from "react";
 import { Copy, Check, Users, Clock, Bell } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, groupAdjacentSlots } from "@/lib/utils";
 import Link from "next/link";
 import { readSchedule, saveAvailability, updateSchedule, getRelatedAvailabilities, setScheduleStatus, confirmSchedule, readScheduleWithRpc, UserData } from "@/services/ScheduleProvider";
 import { eachDayOfInterval } from "date-fns";
@@ -381,6 +381,9 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                     totalParticipants={schedule.participants_id?.length || 0}
                                     creatorAvailableTimes={schedule.available_time}
                                     availabilities={groupAvailabilities}
+                                    onSelect={handleScheduleSelect}
+                                    selectedSlots={new Set(selectedAvailabilities)}
+                                    isInteractive={schedule?.creator_id === currentUser?.id}
                                 />
 
                                 {/* Creator Actions - Only show if current user is creator */}
@@ -404,7 +407,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                 )}
                             </div>
 
-                            <div className="lg:col-span-1">
+                            <div className="lg:col-span-1 space-y-6">
                                 <TimeList
                                     startDate={scheduleDates[0]}
                                     totalParticipants={schedule.participants_id?.length || 1}
@@ -412,6 +415,27 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                     selectedAvailabilities={new Set(selectedAvailabilities)}
                                     onScheduleSelect={handleScheduleSelect}
                                 />
+
+                                {/* Selected Schedule List */}
+                                <div className="rounded-xl border bg-card p-6 shadow-sm">
+                                    <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                                        <div className="h-4 w-4 rounded-full bg-black/80" />
+                                        선택된 스케줄
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {selectedAvailabilities.size === 0 ? (
+                                            <p className="text-sm text-muted-foreground">선택된 시간이 없습니다.</p>
+                                        ) : (
+                                            <div className="grid gap-2">
+                                                {groupAdjacentSlots(Array.from(selectedAvailabilities)).map((range, i) => (
+                                                    <div key={i} className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                                                        {range}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

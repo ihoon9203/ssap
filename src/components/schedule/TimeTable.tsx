@@ -155,12 +155,55 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
         return () => window.removeEventListener("mouseup", handleMouseUp);
     }, [handleMouseUp]);
 
+    const handleDayClick = useCallback((dayIdx: number) => {
+        const slotsForDay: string[] = [];
+        const dateStr = formatDate(dates[dayIdx], "yyyyMMdd");
+
+        // Collect all valid slots for the day
+        for (let t = 0; t < 48; t++) {
+            const key = `${dateStr}-${t}`;
+            if (allowedSlots && !allowedSlots.includes(key)) continue;
+            slotsForDay.push(key);
+        }
+
+        if (slotsForDay.length === 0) return;
+
+        // Check if all are already selected
+        const allSelected = slotsForDay.every(key => selectedSlots.has(key));
+
+        const newSlots = new Set(selectedSlots);
+        if (allSelected) {
+            // Deselect all
+            slotsForDay.forEach(key => newSlots.delete(key));
+        } else {
+            // Select all
+            slotsForDay.forEach(key => newSlots.add(key));
+        }
+
+        setSelectedSlots(newSlots);
+
+        if (onChange) {
+            const availabilityObj: string[] = [];
+            newSlots.forEach(key => {
+                availabilityObj.push(key);
+            });
+            onChange(availabilityObj);
+        }
+
+    }, [dates, allowedSlots, selectedSlots, onChange]);
+
     const gridContent = useMemo(() => (
         <div className="space-y-2">
             {dates.map((day, dayIdx) => (
                 <div key={day.toString()} className="flex items-center gap-4">
                     {/* Date Label */}
-                    <div className="w-28 flex-shrink-0 text-sm font-medium">
+                    <div
+                        className="w-28 flex-shrink-0 text-sm font-medium cursor-pointer transition-all 
+                        flex items-center justify-center h-10 rounded-md border border-border/40 bg-muted/30
+                        hover:bg-primary/10 hover:border-primary/50 hover:text-primary active:scale-95"
+                        onClick={() => handleDayClick(dayIdx)}
+                        title="Click to select/deselect all day"
+                    >
                         {formatDate(day, "EEE, MMM d")}
                     </div>
 
@@ -208,7 +251,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                 </div>
             ))}
         </div>
-    ), [dates, timeSlots, selectedSlots, allowedSlots, handleMouseDown, handleMouseEnter]);
+    ), [dates, timeSlots, selectedSlots, allowedSlots, handleMouseDown, handleMouseEnter, handleDayClick]);
 
     return (
         <div className="relative w-full overflow-hidden rounded-xl border bg-card shadow-sm select-none">
