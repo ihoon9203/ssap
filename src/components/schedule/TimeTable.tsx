@@ -208,7 +208,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                     </div>
 
                     {/* Time Grid */}
-                    <div className="flex flex-1 gap-[2px]">
+                    <div className="flex flex-1">
                         {timeSlots.map((_, timeIdx) => {
                             const key = `${formatDate(day, "yyyyMMdd")}-${timeIdx}`;
                             const isSelected = selectedSlots.has(key);
@@ -217,6 +217,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                             // Removed isInBox logic to defer selection visual to overlay only
 
                             const isHourEnd = timeIdx % 2 === 1;
+                            const isLast = timeIdx === timeSlots.length - 1;
 
                             return (
                                 <div
@@ -237,7 +238,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                                             : "cursor-pointer",
                                         !isDisabled && (isSelected ? "bg-primary" : "bg-muted/30 hover:bg-primary/10"),
                                         // Hour markers
-                                        isHourEnd && "mr-[1px] border-r border-border/50"
+                                        !isLast && (isHourEnd ? "mr-2" : "mr-px")
                                     )}
                                     title={
                                         isDisabled
@@ -266,12 +267,25 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                     )}
 
                     {/* Header Row (Times) */}
-                    <div className="mb-4 flex">
+                    <div className="mb-2 flex">
                         <div className="w-32 flex-shrink-0" /> {/* Spacer for dates */}
-                        <div className="flex flex-1 justify-between text-xs text-muted-foreground">
-                            {timeSlots.filter((_, i) => i % 2 === 0).map((time) => (
-                                <div key={time} className="w-8 text-center -ml-4">{time}</div>
-                            ))}
+                        <div className="flex flex-1">
+                            {Array.from({ length: 24 }).map((_, i) => {
+                                const time = timeSlots[i * 2];
+                                const isLast = i === 23;
+
+                                return (
+                                    <div
+                                        key={i}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center text-xs text-muted-foreground",
+                                            !isLast && "mr-2"
+                                        )}
+                                    >
+                                        {time}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 

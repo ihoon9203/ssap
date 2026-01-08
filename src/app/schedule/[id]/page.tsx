@@ -45,7 +45,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                 const data = await readScheduleWithRpc(id);
                 if (data) {
                     setSchedule(data.schedule);
-                    setMembers([data.creator, ...data.participants]);
+                    setMembers([data.creator, ...data.participants.filter((p: UserData) => p.id !== data.creator.id)]);
 
                     // Initialize selected availabilities from Schedule
                     if (data.schedule.confirmed_schedules) {
@@ -335,7 +335,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                     <div className="pb-4">
                         <div className="flex flex-wrap gap-2">
                             {members.map((member) => (
-                                <div className="flex items-center gap-2">
+                                <div key={member.id} className="flex items-center gap-2">
                                     <div
                                         className="group flex items-center gap-3 rounded-full border bg-background px-5 py-2.5 text-base font-medium shadow-sm transition-colors hover:bg-muted"
                                         title="Edit name"
