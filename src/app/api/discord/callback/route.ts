@@ -1,43 +1,97 @@
+
 import { createClient } from "@/lib/supabase/server";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get("code");
-    const state = searchParams.get("state"); // This is the schedule_id
-    const guild_id = searchParams.get("guild_id");
+    const scheduleId = searchParams.get("state");
+    const guildId = searchParams.get("guild_id");
     const error = searchParams.get("error");
 
-    console.log("[Discord Callback] Received parameters:", { code, state, guild_id, error });
-
     if (error) {
-        console.error("[Discord Callback] Error received:", error);
-        return NextResponse.json({ error }, { status: 400 });
+        return NextResponse.redirect(new URL(`/schedule/${scheduleId}?error=${error}`, request.url));
     }
 
-    if (!code || !guild_id) {
-        console.warn("[Discord Callback] Missing code or guild_id");
-        // If simply adding the bot, we might not get a code if we didn't ask for it, 
-        // but we asked for response_type=code.
-        // However, for just adding a bot to a server, we mainly care about the guild_id returned if the bot was added.
-        // Actually, Discord returns guild_id in the redirect if the bot was added.
-        // If we want to link the schedule to the channel/guild, we need to know which guild it was added to.
+    if (!code || !scheduleId) {
+        return NextResponse.json({ error: "Missing code or state" }, { status: 400 });
     }
 
-    // If we have a schedule_ID (state) and a guild_id, we can try to find a default channel or just log it.
-    // Ideally, we would need the user to select a channel, but for now let's just redirect back to the schedule page.
+    try {
+        // Exchange Code for Token & Webhook Info
+        const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                client_id: process.env.DISCORD_CLIENT_ID!,
+                client_secret: process.env.DISCORD_CLIENT_SECRET!,
+                grant_type: "authorization_code",
+                code: code,
+                redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/discord/callback`,
+            }),
+        });
 
-    if (state) {
-        console.log(`[Discord Callback] Redirecting back to schedule: ${state}`);
-        // Redirect back to the schedule page
-        const redirectUrl = new URL(`/schedule/${state}`, request.url);
-        // We can append a query param to show success
-        redirectUrl.searchParams.set("bot_added", "true");
-        if (guild_id) {
-            redirectUrl.searchParams.set("guild_id", guild_id);
+        if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            console.error("Token Exchange Error:", errorText);
+            return NextResponse.redirect(new URL(`/schedule/${scheduleId}?error=token_exchange_failed`, request.url));
         }
-        return NextResponse.redirect(redirectUrl);
-    }
 
-    return NextResponse.json({ message: "Bot added successfully, but lost state." });
+        const tokenData = await tokenResponse.json();
+        const { webhook, guild } = tokenData;
+
+        if (!webhook) {
+            // User authorized but didn't select a channel (or scope issues)
+            console.error("No webhook data returned");
+            return NextResponse.redirect(new URL(`/schedule/${scheduleId}?error=no_channel_selected`, request.url));
+        }
+
+        const supabase = await createClient();
+
+        // 1. Insert into discord_integrations
+        const { data: integration, error: iError } = await supabase
+            .from("discord_integrations")
+            .insert({
+                schedule_id: scheduleId,
+                discord_channel_id: webhook.channel_id,
+                discord_server_id: guild?.id || guildId,
+                channel_name: webhook.name,
+                webhook_id: webhook.id,
+                webhook_token: webhook.token,
+                webhook_url: webhook.url,
+                notification_settings: { events: ["update", "confirm"] },
+            })
+            .select("id")
+            .single();
+
+        if (iError) {
+            console.error("DB Insert Error:", iError);
+            return NextResponse.redirect(new URL(`/schedule/${scheduleId}?error=db_error`, request.url));
+        }
+
+        // 2. Update Schedule
+        // Fetch current array first to append
+        const { data: schedule } = await supabase
+            .from("schedules")
+            .select("discord_channel_ids")
+            .eq("id", scheduleId)
+            .single();
+
+        const uniqueIds = new Set(schedule?.discord_channel_ids || []);
+        uniqueIds.add(integration.id);
+
+        await supabase
+            .from("schedules")
+            .update({ discord_channel_ids: Array.from(uniqueIds) })
+            .eq("id", scheduleId);
+
+        // Success Redirect
+        return NextResponse.redirect(new URL(`/schedule/${scheduleId}?bot_added=true`, request.url));
+
+    } catch (err) {
+        console.error("Callback Error:", err);
+        return NextResponse.redirect(new URL(`/schedule/${scheduleId}?error=internal_error`, request.url));
+    }
 }

@@ -20,7 +20,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
     const [isCreator, setIsCreator] = useState(false);
 
     const [copied, setCopied] = useState(false);
-    const [activeTab, setActiveTab] = useState<"input" | "result">("input");
+    const [activeTab, setActiveTab] = useState<"input" | "result" | "discord">("input");
     const [isConfirmed, setIsConfirmed] = useState(false);
     const [availabilities, setAvailabilities] = useState<string[]>([]);
     const [groupAvailabilities, setGroupAvailabilities] = useState<{ [key: string]: number }>({});
@@ -282,48 +282,6 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                     </div>
 
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                        {/* Discord Bot Invite */}
-                        <div className="flex items-center gap-2 rounded-lg border bg-indigo-50 p-2 shadow-sm dark:bg-indigo-900/20">
-                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" color="#5865F2">
-                                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 13.48 13.48 0 0 0-.59 1.227 18.312 18.312 0 0 0-5.526 0 13.48 13.48 0 0 0-.59-1.227.074.074 0 0 0-.079-.037 19.791 19.791 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.118.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.076.076 0 0 0-.04.106 14.1 14.1 0 0 0 1.225 1.994.076.076 0 0 0 .084.028 19.9 19.9 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z" />
-                            </svg>
-                            <span className="px-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                                봇 추가하기:
-                            </span>
-                            <div className="flex items-center gap-1">
-                                <a
-                                    href={inviteUrl || "#"}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-md p-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-800/50 text-indigo-600 dark:text-indigo-400 font-medium text-xs flex items-center gap-1 transition-colors"
-                                >
-                                    서버에 링크를 복사 붙여넣기 해서 봇을 추가해주세요!
-                                </a>
-                                <div className="h-4 w-px bg-indigo-200 dark:bg-indigo-800" />
-                                <button
-                                    onClick={() => {
-                                        if (inviteUrl) {
-                                            navigator.clipboard.writeText(inviteUrl);
-                                            // Visual feedback
-                                            const btn = document.getElementById("copy-bot-btn");
-                                            if (btn) {
-                                                btn.classList.add("text-green-500");
-                                                setTimeout(() => btn.classList.remove("text-green-500"), 2000);
-                                            }
-                                            alert("Bot invite link copied!");
-                                        } else {
-                                            alert("Loading link...");
-                                        }
-                                    }}
-                                    id="copy-bot-btn"
-                                    className="rounded-md p-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-800/50"
-                                    title="Copy Invite Link"
-                                >
-                                    <Copy className="h-3.5 w-3.5 text-indigo-500" />
-                                </button>
-                            </div>
-                        </div>
-
                         <div className="flex items-center gap-2 rounded-lg border bg-card p-2 shadow-sm">
                             <span className="px-2 text-sm font-medium text-muted-foreground">
                                 Code:
@@ -385,6 +343,22 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                 Group Result
                             </div>
                         </button>
+                        <button
+                            onClick={() => setActiveTab("discord")}
+                            className={cn(
+                                "border-b-2 pb-3 text-sm font-medium transition-colors",
+                                activeTab === "discord"
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <div className="flex items-center gap-2">
+                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" color="#5865F2">
+                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 13.48 13.48 0 0 0-.59 1.227 18.312 18.312 0 0 0-5.526 0 13.48 13.48 0 0 0-.59-1.227.074.074 0 0 0-.079-.037 19.791 19.791 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.118.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.076.076 0 0 0-.04.106 14.1 14.1 0 0 0 1.225 1.994.076.076 0 0 0 .084.028 19.9 19.9 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z" />
+                                </svg>
+                                Discord Connect
+                            </div>
+                        </button>
                     </div>
                 </div>
 
@@ -430,7 +404,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                 </button>
                             </div>
                         </div>
-                    ) : (
+                    ) : activeTab === "result" ? (
                         <div className="grid gap-8 lg:grid-cols-3">
                             <div className="lg:col-span-2 space-y-6">
                                 <HeatmapView
@@ -492,6 +466,81 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                                 ))}
                                             </div>
                                         )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="max-w-xl space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                            {/* Discord Bot Invite */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold">1. 디스코드 봇 추가</h3>
+                                <div className="flex flex-col gap-2 rounded-lg border bg-indigo-50 p-4 shadow-sm dark:bg-indigo-900/20">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/40">
+                                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" color="#5865F2">
+                                                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 13.48 13.48 0 0 0-.59 1.227 18.312 18.312 0 0 0-5.526 0 13.48 13.48 0 0 0-.59-1.227.074.074 0 0 0-.079-.037 19.791 19.791 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.118.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.076.076 0 0 0-.04.106 14.1 14.1 0 0 0 1.225 1.994.076.076 0 0 0 .084.028 19.9 19.9 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z" />
+                                            </svg>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-medium text-indigo-900 dark:text-indigo-100">
+                                                서버에 봇 초대하기
+                                            </div>
+                                            <div className="text-xs text-indigo-700 dark:text-indigo-300">
+                                                아래 버튼을 눌러 디스코드 서버에 봇을 추가해주세요.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 pt-2">
+                                        <a
+                                            href={inviteUrl || "#"}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+                                        >
+                                            봇 초대 링크 열기
+                                        </a>
+                                        <button
+                                            onClick={() => {
+                                                if (inviteUrl) {
+                                                    navigator.clipboard.writeText(inviteUrl);
+                                                    alert("Link copied!");
+                                                }
+                                            }}
+                                            className="rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50 dark:border-indigo-800 dark:bg-transparent dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+                                        >
+                                            링크 복사
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Copy Command */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold">2. 알림 연결하기</h3>
+                                <div className="rounded-lg border bg-card p-4 shadow-sm">
+                                    <p className="mb-3 text-sm text-muted-foreground">
+                                        봇이 있는 채널에서 아래 명령어를 입력하여 스케줄 알림을 연결하세요.
+                                    </p>
+                                    <div className="flex items-center gap-2 pt-2">
+                                        <a
+                                            href={inviteUrl || "#"}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+                                        >
+                                            봇 초대 링크 열기
+                                        </a>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`/ssap-connect schedule_id:${schedule.id}`);
+                                                alert("Command copied! Paste it into your Discord channel.");
+                                            }}
+                                            className="rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-50 dark:border-indigo-800 dark:bg-transparent dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+                                        >
+                                            링크 복사
+                                        </button>
                                     </div>
                                 </div>
                             </div>
