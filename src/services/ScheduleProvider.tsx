@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generateRandomCode } from "@/lib/utils";
 import { Availability, Schedule } from "@/models/types";
 import { createContext, useContext, useEffect, useState } from "react";
+import { notifyScheduleUpdate } from "@/app/actions";
 
 interface ScheduleContextType {
     schedule: Schedule | null;
@@ -171,6 +172,14 @@ export const updateSchedule = async (scheduleId: string, updates: Partial<Schedu
         console.error("Error updating schedule:", error);
         throw error;
     }
+
+    // Notify Discord
+    try {
+        await notifyScheduleUpdate(scheduleId);
+    } catch (err) {
+        console.error("Failed to notify Discord:", err);
+    }
+
     return data;
 };
 
@@ -367,6 +376,16 @@ export const setScheduleStatus = async (scheduleId: string, newStatus: string) =
         .rpc('set_status', { schedule_id: scheduleId, new_status: newStatus });
 
     console.log("RPC result:", data);
+
+    // Notify Discord
+    if (!error) {
+        try {
+            await notifyScheduleUpdate(scheduleId);
+        } catch (err) {
+            console.error("Failed to notify Discord:", err);
+        }
+    }
+
     return { data, error };
 }
 
@@ -378,6 +397,16 @@ export const confirmSchedule = async (scheduleId: string, schedule_list: string[
         .rpc('confirm_schedule_times', { schedule_id_input: scheduleId, confirmed_schedule_list: schedule_list });
 
     console.log("RPC result:", data);
+
+    // Notify Discord
+    if (!error) {
+        try {
+            await notifyScheduleUpdate(scheduleId);
+        } catch (err) {
+            console.error("Failed to notify Discord:", err);
+        }
+    }
+
     return { data, error };
 }
 

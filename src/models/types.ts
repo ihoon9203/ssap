@@ -22,6 +22,17 @@ export interface Schedule {
     participants_id?: string[]; // Array of UUIDs
     dates?: string[]; // Array of strings (YYYY-MM-DD)
     available_time?: string[]; // Array of strings (YYYYMMDD-HH:mm) representing the valid slots defined by creator
+    discord_channel_ids?: string[]; // Array of UUIDs from discord_integrations
+}
+
+export interface DiscordIntegration {
+    id: string;
+    created_at: string;
+    channel_id: string;
+    guild_id?: string;
+    channel_name?: string;
+    guild_name?: string;
+    schedule_id?: string; // If 1:1 mapping, or use junction table if many:many
 }
 
 export interface Participant {

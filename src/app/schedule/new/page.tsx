@@ -192,9 +192,18 @@ export default function NewSchedulePage() {
 
                                 <TimeTable
                                     dates={formData.dates}
-                                    availabilities={[]}
+                                    availabilities={formData.availability}
                                     onChange={(avail) => setFormData({ ...formData, availability: avail })}
                                 />
+
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={() => setFormData({ ...formData, availability: [] })}
+                                        className="rounded-full border border-input bg-background px-6 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                                    >
+                                        Reset
+                                    </button>
+                                </div>
 
                                 <div className="flex gap-4">
                                     <button
