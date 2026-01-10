@@ -113,7 +113,11 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
     const handleConfirm = async () => {
         if (!confirm("Are you sure you want to confirm this schedule? This will notify all participants.")) return;
-        const { data, error } = await confirmSchedule(id, Array.from(selectedAvailabilities));
+        if (currentUser == null) {
+            alert("Please log in to confirm this schedule.");
+            return;
+        }
+        const { data, error } = await confirmSchedule(id, currentUser.id, Array.from(selectedAvailabilities));
         if (data) {
             setIsConfirmed(true);
             alert("Schedule confirmed! Notifications sent.");
@@ -127,15 +131,18 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
             alert("Please select at least one availability.");
             return;
         }
+        if (currentUser == null) {
+            alert("Please log in to save your availability.");
+            return;
+        }
 
         try {
             if (isCreator) {
                 // Creator updates the Schedule's available_time
-                await updateSchedule(id, { available_time: availabilities });
+                await updateSchedule(id, currentUser.id, { available_time: availabilities });
                 alert("Schedule times updated successfully!");
             } else {
                 // Participant saves their availability
-                if (!currentUser) return; // Should be handled by logic but safety check
 
                 await saveAvailability(id, currentUser.id, availabilities);
                 alert("Availability saved successfully!");

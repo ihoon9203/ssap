@@ -2,11 +2,11 @@
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 
 export async function sendDiscordMessage(channelId: string, content: string, embeds?: any[]) {
-    const botToken = process.env.DISCORD_BOT_TOKEN;
-    if (!botToken) {
-        console.warn("DISCORD_BOT_TOKEN is not set. Skipping Discord notification.");
-        return;
-    }
+    // 1. 토큰 확인 로그
+    console.log("Using Token:", process.env.DISCORD_BTOKEN ? "Loaded (Hidden)" : "MISSING");
+
+    const botToken = process.env.DISCORD_TOKEN;
+    if (!botToken) return;
 
     try {
         const res = await fetch(`${DISCORD_API_BASE}/channels/${channelId}/messages`, {
@@ -15,21 +15,22 @@ export async function sendDiscordMessage(channelId: string, content: string, emb
                 "Authorization": `Bot ${botToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                content,
-                embeds,
-            }),
+            body: JSON.stringify({ content, embeds }),
         });
+
+        // 2. 응답 상태 로그
+        console.log(`Discord API Status: ${res.status}`);
 
         if (!res.ok) {
             const errorData = await res.json();
-            console.error("Failed to send Discord message:", errorData);
-            throw new Error(`Discord API Error: ${res.status} ${res.statusText}`);
+            // 3. 실패 원인 출력
+            console.error("❌ Discord Send Failed:", JSON.stringify(errorData, null, 2));
+            return;
         }
 
+        console.log("✅ Message Sent Successfully!");
         return await res.json();
     } catch (error) {
-        console.error("Error in sendDiscordMessage:", error);
-        // We might not want to crash the whole request if discord fails
+        console.error("Network/Code Error:", error);
     }
 }

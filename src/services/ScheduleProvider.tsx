@@ -159,7 +159,7 @@ export const getJoinedScheduleList = async (userId: string, idsToIgnore: string[
     return data;
 }
 
-export const updateSchedule = async (scheduleId: string, updates: Partial<Schedule>) => {
+export const updateSchedule = async (scheduleId: string, actorId: string, updates: Partial<Schedule>) => {
     const supabase = createClient();
     const { data, error } = await supabase
         .from("schedules")
@@ -174,8 +174,18 @@ export const updateSchedule = async (scheduleId: string, updates: Partial<Schedu
     }
 
     // Notify Discord
+    console.log('notifying...')
     try {
-        await notifyScheduleUpdate(scheduleId);
+        const keys = Object.keys(updates);
+        const descriptions = keys.map(k => {
+            if (k === 'title') return `제목이 "${updates.title}"(으)로 변경되었습니다.`;
+            if (k === 'description') return `설명이 수정되었습니다.`;
+            if (k === 'status') return `상태가 "${updates.status}"(으)로 변경되었습니다.`;
+            if (k === 'dates') return `날짜 후보가 변경되었습니다.`;
+            if (k === 'available_time') return `가능 시간대가 변경되었습니다.`;
+            return `${k} 정보가 변경되었습니다.`;
+        });
+        await notifyScheduleUpdate(scheduleId, actorId, descriptions.join('\n'));
     } catch (err) {
         console.error("Failed to notify Discord:", err);
     }
@@ -368,7 +378,7 @@ export const joinSchedule = async (scheduleId: string, userId: string) => {
     return data;
 };
 
-export const setScheduleStatus = async (scheduleId: string, newStatus: string) => {
+export const setScheduleStatus = async (scheduleId: string, actorId: string, newStatus: string) => {
     const supabase = createClient();
     console.log("Confirming schedule via RPC:", scheduleId);
 
@@ -379,8 +389,9 @@ export const setScheduleStatus = async (scheduleId: string, newStatus: string) =
 
     // Notify Discord
     if (!error) {
+        console.log("Calling notifyScheduleUpdate from setScheduleStatus...");
         try {
-            await notifyScheduleUpdate(scheduleId);
+            await notifyScheduleUpdate(scheduleId, actorId, `상태가 "${newStatus}"(으)로 변경되었습니다.`);
         } catch (err) {
             console.error("Failed to notify Discord:", err);
         }
@@ -389,7 +400,7 @@ export const setScheduleStatus = async (scheduleId: string, newStatus: string) =
     return { data, error };
 }
 
-export const confirmSchedule = async (scheduleId: string, schedule_list: string[]) => {
+export const confirmSchedule = async (scheduleId: string, actorId: string, schedule_list: string[]) => {
     const supabase = createClient();
     console.log("Confirming schedule via RPC:", scheduleId);
 
@@ -400,8 +411,9 @@ export const confirmSchedule = async (scheduleId: string, schedule_list: string[
 
     // Notify Discord
     if (!error) {
+        console.log("Calling notifyScheduleUpdate from confirmSchedule...");
         try {
-            await notifyScheduleUpdate(scheduleId);
+            await notifyScheduleUpdate(scheduleId, actorId, "🎉 스케줄이 최종 확정되었습니다! 참여자들은 시간을 확인해주세요.");
         } catch (err) {
             console.error("Failed to notify Discord:", err);
         }
