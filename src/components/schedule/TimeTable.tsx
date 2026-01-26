@@ -195,7 +195,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
     const gridContent = useMemo(() => (
         <div className="space-y-2">
             {dates.map((day, dayIdx) => (
-                <div key={day.toString()} className="flex items-center gap-4">
+                <div key={day.toString()} className="flex items-center gap-2">
                     {/* Date Label */}
                     <div
                         className="w-28 flex-shrink-0 text-sm font-medium cursor-pointer transition-all 
@@ -208,7 +208,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                     </div>
 
                     {/* Time Grid */}
-                    <div className="flex flex-1">
+                    <div className="flex flex-2 gap-[2px]">
                         {timeSlots.map((_, timeIdx) => {
                             const key = `${formatDate(day, "yyyyMMdd")}-${timeIdx}`;
                             const isSelected = selectedSlots.has(key);
@@ -218,6 +218,17 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
 
                             const isHourEnd = timeIdx % 2 === 1;
                             const isLast = timeIdx === timeSlots.length - 1;
+
+                            // Text color logic: White for selected/disabled(dark), Black for default/light
+                            // Disabled is gray-200 (light) or gray-800 (dark). 
+                            // Selected is primary (usually blue/black).
+                            // Default is muted/30.
+                            // User used "text-black" for default.
+
+                            const isDarkBg = isSelected || (isDisabled && false); // Simplified for now, usually disabled is light gray.
+                            // Actually user changed "text-muted-foreground" to "text-black".
+
+                            const textColorClass = isSelected ? "text-white" : "text-black";
 
                             return (
                                 <div
@@ -232,32 +243,36 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                                         if (!isDisabled) handleMouseEnter(dayIdx, timeIdx);
                                     }}
                                     className={cn(
-                                        "h-10 flex-1 rounded-sm transition-all hover:ring-2 hover:ring-ring hover:z-10",
+                                        "h-8 flex-1 rounded-sm transition-all hover:ring-2 hover:ring-ring hover:z-10 flex items-center px-3 justify-center text-[12px] select-none ",
                                         isDisabled
-                                            ? "bg-gray-200 dark:bg-gray-800 cursor-not-allowed" // Disabled style
+                                            ? "bg-gray-400 dark:bg-gray-800 cursor-not-allowed text-muted-foreground" // Disabled style
                                             : "cursor-pointer",
-                                        !isDisabled && (isSelected ? "bg-primary" : "bg-muted/30 hover:bg-primary/10"),
+                                        !isDisabled && (isSelected ? "bg-primary text-primary-foreground" : "bg-gray-400/30 hover:bg-primary/10"),
+                                        !isDisabled && textColorClass,
                                         // Hour markers
-                                        !isLast && (isHourEnd ? "mr-2" : "mr-px")
+                                        !isLast && "mr-1"
                                     )}
                                     title={
                                         isDisabled
                                             ? "Unavailable"
                                             : `${formatDate(day, "M월 d일")} ${timeSlots[timeIdx]}`
                                     }
-                                />
+                                >
+                                    {timeSlots[timeIdx]}
+                                </div>
                             );
                         })}
                     </div>
                 </div>
-            ))}
-        </div>
+            ))
+            }
+        </div >
     ), [dates, timeSlots, selectedSlots, allowedSlots, handleMouseDown, handleMouseEnter, handleDayClick]);
 
     return (
         <div className="relative w-full overflow-hidden rounded-xl border bg-card shadow-sm select-none">
             <div className="overflow-x-auto relative" ref={containerRef}>
-                <div className="min-w-[1200px] p-6 relative">
+                <div className="min-w-[1200px] px-10 py-6 relative">
                     {/* Overlay */}
                     {overlayStyle && (
                         <div
@@ -265,29 +280,6 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
                             style={overlayStyle}
                         />
                     )}
-
-                    {/* Header Row (Times) */}
-                    <div className="mb-2 flex">
-                        <div className="w-32 flex-shrink-0" /> {/* Spacer for dates */}
-                        <div className="flex flex-1">
-                            {Array.from({ length: 24 }).map((_, i) => {
-                                const time = timeSlots[i * 2];
-                                const isLast = i === 23;
-
-                                return (
-                                    <div
-                                        key={i}
-                                        className={cn(
-                                            "flex-1 flex items-center justify-center text-xs text-muted-foreground",
-                                            !isLast && "mr-2"
-                                        )}
-                                    >
-                                        {time}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
 
                     {/* Rows */}
                     {gridContent}

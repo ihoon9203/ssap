@@ -142,7 +142,7 @@ export function TimeList({
                                 <div className="flex items-center gap-1.5">
                                     <Users className="h-4 w-4 text-muted-foreground" />
                                     <span className={isFull ? "font-bold text-blue-600" : "font-medium"}>
-                                        {group.count + 1}/{totalParticipants}
+                                        {group.count}/{totalParticipants}
                                     </span>
                                 </div>
                             </div>

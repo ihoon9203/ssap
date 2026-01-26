@@ -209,21 +209,24 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
             return diffDays;
         };
 
-        related.forEach((avail: any) => {
-            if (avail.selected_times) {
-                avail.selected_times.forEach((timeStr: string) => {
-                    // timeStr: yyyyMMdd-timeIdx
-                    const [datePart, timePart] = timeStr.split('-');
-                    const timeIdx = parseInt(timePart);
-                    const dayIdx = getDayDiff(datePart);
+        // Filter out creator from group availabilities
+        related
+            .filter((avail: any) => avail.user_id !== schedule.creator_id)
+            .forEach((avail: any) => {
+                if (avail.selected_times) {
+                    avail.selected_times.forEach((timeStr: string) => {
+                        // timeStr: yyyyMMdd-timeIdx
+                        const [datePart, timePart] = timeStr.split('-');
+                        const timeIdx = parseInt(timePart);
+                        const dayIdx = getDayDiff(datePart);
 
-                    if (dayIdx >= 0) {
-                        const key = `${dayIdx}-${timeIdx}`;
-                        counts[key] = (counts[key] || 0) + 1;
-                    }
-                });
-            }
-        });
+                        if (dayIdx >= 0) {
+                            const key = `${dayIdx}-${timeIdx}`;
+                            counts[key] = (counts[key] || 0) + 1;
+                        }
+                    });
+                }
+            });
 
         setGroupAvailabilities(counts);
     };
@@ -417,7 +420,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                 <HeatmapView
                                     startDate={scheduleDates[0]}
                                     endDate={scheduleDates[scheduleDates.length - 1]}
-                                    totalParticipants={schedule.participants_id?.length || 0}
+                                    totalParticipants={schedule.participants_id?.filter((pid: string) => pid !== schedule.creator_id).length || 0}
                                     creatorAvailableTimes={schedule.available_time}
                                     availabilities={groupAvailabilities}
                                     onSelect={handleScheduleSelect}
@@ -449,7 +452,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             <div className="lg:col-span-1 space-y-6">
                                 <TimeList
                                     startDate={scheduleDates[0]}
-                                    totalParticipants={schedule.participants_id?.length || 1}
+                                    totalParticipants={schedule.participants_id?.filter((pid: string) => pid !== schedule.creator_id).length || 1}
                                     availabilities={groupAvailabilities}
                                     selectedAvailabilities={new Set(selectedAvailabilities)}
                                     onScheduleSelect={handleScheduleSelect}

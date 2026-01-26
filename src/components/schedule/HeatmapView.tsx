@@ -163,48 +163,92 @@ export function HeatmapView({
     }, [handleMouseUp]);
 
 
+    const HEATMAP_COLORS = [
+        '#FFF176', '#FFEA70', '#FFE46A', '#FFDE64', '#FFD75D',
+        '#FFD157', '#FFCB51', '#FFC54B', '#FFBE45', '#FFB83F',
+        '#FFB239', '#FFAB33', '#FFA52D', '#FF9F26', '#FF9820',
+        '#FF921A', '#FF8C14', '#FF850E', '#FF7F08', '#FF7902'
+    ];
+
     const getSlotStyle = (count: number, isCreatorAvailable: boolean) => {
         if (count === 0) {
-            if (isCreatorAvailable) {
-                // Available but not selected: Darker gray
-                return { className: "bg-gray-400" };
-            }
-            // Not available at all: Lighter gray but visible
+            // 0 participants -> Gray (bg-secondary or specific gray).
+            // Retain distinction if creator is available? Plan says "0 participants -> Gray".
+            // Previous code:
+            // if (isCreatorAvailable) return { className: "bg-gray-400" };
+            // return { className: "bg-secondary" };
+
+            // Let's keep the distinction for now as it aids the creator, but plan says "0 participants -> Gray".
+            // If I strictly follow plan:
             return { className: "bg-secondary" };
         }
-        if (count === totalParticipants) return { className: "bg-blue-500 text-white" };
 
-        // For counts between 1 and n-1
-        // Interpolate between Yellow (approx Hue 45) and Green (approx Hue 120)
-        // We want 1 -> Yellow, (n-1) -> Green
-
-        let hue = 120; // Default green
-        if (totalParticipants > 2) {
-            const minCount = 1;
-            const maxCount = totalParticipants - 1;
-
-            // Normalize count to 0..1 range
-            // t = 0 when count == 1
-            // t = 1 when count == maxCount
-            const t = (count - minCount) / (maxCount - minCount);
-
-            // Yellow (45) -> Green (130)
-            hue = 45 + Math.round(t * (130 - 45));
-        } else {
-            // If only 1 participants (1/2 is the only partial state), make it bg-blue-500
-            hue = 215;
+        if (count === totalParticipants) {
+            // Max participants -> Blue.
+            return { className: "bg-blue-500 text-white" };
         }
+
+        // Intermediate counts -> Pick color from designated palette
+        // Formula: index = round( (k-1) / (n-1) * j )
+        // k = HEATMAP_COLORS.length
+        // n = totalParticipants - 1 (number of intermediate steps? No, max participant is totalParticipants)
+        // actually n in the plan description: "n = totalParticipants - 1 (number of intermediate steps)"
+        // j = current_count - 1 (0-indexed step)
+
+        // Wait, if totalParticipants is 5.
+        // Counts can be 1, 2, 3, 4, 5.
+        // 5 is Max -> Blue.
+        // 0 is Gray.
+        // Intermediates are 1, 2, 3, 4.
+        // "j = current_count - 1".
+        // If count = 1, j=0.
+        // If count = 4, j=3.
+        // "n = totalParticipants - 1".
+        // If totalParticipants = 5, n=4.
+
+        // Let's re-read carefully: "Let n = totalParticipants - 1 (number of intermediate steps)"
+        // If totalParticipants = 5. Intermediates are 1, 2, 3, 4. That is 4 steps. So n=4. Correct.
+
+        // "index = round( (k-1) / (n-1) * j )"
+        // k=5 (colors). k-1 = 4.
+        // n=4.
+        // factor = 4/4 = 1.
+        // j ranges 0..3.
+        // index ranges 0..3.
+        // Perfect mapping.
+
+        // Edge case: totalParticipants <= 1
+        // If totalParticipants = 1. 
+        // Counts: 0 (Gray), 1 (Max -> Blue).
+        // No intermediates. This logic block won't be reached if count === totalParticipants.
+
+        // What if count < totalParticipants? (e.g. 1/2).
+
+        const k = HEATMAP_COLORS.length;
+        const n = totalParticipants - 1;
+        const j = count - 1;
+
+        if (n <= 0) {
+            // Should verify logic doesn't divide by zero or act weird if only 1 participant total?
+            // If totalParticipants=1, then count can only be 1 (handled by Max check) or 0 (handled by 0 check).
+            // If data is somehow count > totalParticipants? Fallback to Max.
+            return { className: "bg-blue-500 text-white" };
+        }
+
+        const index = Math.round(((k - 1) / n) * j);
+        // Clamp index just in case
+        const safeIndex = Math.max(0, Math.min(k - 1, index));
 
         return {
             className: "",
-            style: { backgroundColor: `hsla(${hue}, 90%, 55%, 1)` }
+            style: { backgroundColor: HEATMAP_COLORS[safeIndex] }
         };
     };
 
     return (
         <div className="relative w-full overflow-hidden rounded-xl border bg-card shadow-sm select-none">
             <div className="overflow-x-auto relative" ref={containerRef}>
-                <div className="min-w-[1200px] p-6 relative">
+                <div className="min-w-[1200px] px-10 py-6 relative">
                     {/* Overlay */}
                     {overlayStyle && (
                         <div
@@ -213,28 +257,18 @@ export function HeatmapView({
                         />
                     )}
 
-                    {/* Header Row (Times) */}
-                    <div className="mb-4 flex">
-                        <div className="w-32 flex-shrink-0" />
-                        <div className="flex flex-1 justify-between text-xs text-muted-foreground">
-                            {timeSlots.filter((_, i) => i % 2 === 0).map((time) => (
-                                <div key={time} className="w-8 text-center">{time}</div>
-                            ))}
-                        </div>
-                    </div>
-
                     {/* Rows */}
                     <div className="space-y-2">
                         {days.map((day, dayIdx) => (
-                            <div key={day.toString()} className="flex items-center gap-4">
+                            <div key={day.toString()} className="flex items-center gap-2">
                                 {/* Date Label */}
                                 <div className="w-28 flex-shrink-0 text-sm font-medium">
                                     {format(day, "EEE, MMM d")}
                                 </div>
 
                                 {/* Heatmap Grid */}
-                                <div className="flex flex-1 gap-[2px]">
-                                    {timeSlots.map((_, timeIdx) => {
+                                <div className="flex flex-2 gap-[2px]">
+                                    {timeSlots.map((timeLabel, timeIdx) => {
                                         const count = availabilities[`${dayIdx}-${timeIdx}`] || 0;
 
                                         // Check creator availability
@@ -248,10 +282,38 @@ export function HeatmapView({
 
                                         let { className, style } = getSlotStyle(count, isCreatorAvailable);
 
-                                        // Rule 3: If selected and originally white (count 0), fill with black
-                                        if (isSelected && count === 0) {
-                                            className = "!bg-gray-500 !opacity-100";
+                                        // Rule 4: Selected slots -> Dark Blue
+                                        if (isSelected) {
+                                            className = "bg-blue-700 text-white";
                                             style = undefined;
+                                        }
+
+                                        // Determine text color for readability
+                                        // Default text color is handled by base styles, but for colored backgrounds:
+                                        // If bg is dark/saturated, white text might be better.
+                                        // If bg is light (gray-200), black is fine.
+                                        // Simple heuristic: if we have a style with background (which are saturated colors here), use white text if possible?
+                                        // Or just mix-blend-mode equivalent. 
+                                        // Actually `getSlotStyle` returns `text-white` for "All Available".
+                                        // Re-implementing simplified logic for this block:
+                                        // Re-implementing simplified logic for this block:
+
+                                        let textColorClass = "";
+
+                                        // Rule 3: Count > 0 OR Selected -> White
+                                        if (count > 0 || isSelected) {
+                                            textColorClass = "text-white";
+                                        } else {
+                                            // count === 0
+                                            if (isCreatorAvailable) {
+                                                // Rule 2: Host Selected -> Black
+                                                textColorClass = "text-black dark:text-white";
+                                                // dark:text-white added for safety in dark mode, but user said "Black". 
+                                                // If bg is light (bg-secondary), black is good.
+                                            } else {
+                                                // Rule 1: Host Not Selected -> Gray
+                                                textColorClass = "text-gray-400";
+                                            }
                                         }
 
                                         return (
@@ -265,18 +327,21 @@ export function HeatmapView({
                                                 }}
                                                 onMouseEnter={() => handleMouseEnter(dayIdx, timeIdx)}
                                                 className={cn(
-                                                    "h-10 flex-1 rounded-sm transition-all relative overflow-hidden border border-border/30",
+                                                    "h-8 flex-1 rounded-sm transition-all relative overflow-hidden border border-border/30 flex items-center px-3 justify-center text-[12px] select-none",
                                                     isInteractive ? "cursor-pointer" : "cursor-default",
                                                     className,
+                                                    textColorClass,
                                                     // Add borders for hour markers (stronger)
                                                     timeIdx % 2 === 1 && "mr-[1px] !border-r-border/60",
                                                     // Opacity Rule
-                                                    isDimmed && "opacity-50 grayscale-[20%]"
+                                                    isDimmed && "opacity-50 grayscale-[20%]",
+                                                    // Creator Availability Border (Gray)
+                                                    isCreatorAvailable && "ring-2 ring-inset ring-gray-400 z-10"
                                                 )}
                                                 style={style}
-                                                title={`${count}/${totalParticipants} available${!isCreatorAvailable ? ' (Closed)' : ''}`}
+                                                title={`${count}/${totalParticipants} available${!isCreatorAvailable ? ' (Closed)' : ''} ${isCreatorAvailable ? '(Host Available)' : ''}`}
                                             >
-                                                {/* No overlay needed, rely on Opacity and Color change */}
+                                                {timeLabel}
                                             </div>
                                         );
                                     })}
@@ -291,32 +356,51 @@ export function HeatmapView({
                 <div className="flex items-center justify-center gap-6 text-sm">
                     {/* Legend Items */}
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded bg-muted/30 border" />
+                        <div className="h-4 w-4 rounded bg-secondary border" />
                         <span>0/{totalParticipants}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded" style={{ backgroundColor: 'hsla(45, 90%, 55%, 1)' }} />
-                        <span>1/{totalParticipants} (Low)</span>
-                    </div>
-                    {totalParticipants > 2 && (
+                    {totalParticipants > 1 && (
+                        <>
+                            <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 rounded" style={{ backgroundColor: HEATMAP_COLORS[0] }} />
+                                <span>1 (Min)</span>
+                            </div>
+                            {totalParticipants > 2 && (
+                                <div className="flex items-center gap-2">
+                                    {/* Show a mini-gradient or just 3 dots using the palette */}
+                                    <div className="flex gap-[1px]">
+                                        {HEATMAP_COLORS.slice(1, -1).map(c => (
+                                            <div key={c} className="h-4 w-2" style={{ backgroundColor: c }} />
+                                        ))}
+                                    </div>
+                                    <span>...</span>
+                                </div>
+                            )}
+                            {totalParticipants > 2 && (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 rounded" style={{ backgroundColor: HEATMAP_COLORS[HEATMAP_COLORS.length - 1] }} />
+                                    <span>{totalParticipants - 1} (Max-1)</span>
+                                </div>
+                            )}
+                        </>
+                    )}
+                    {totalParticipants > 0 && (
                         <div className="flex items-center gap-2">
-                            <div className="h-1 w-8 rounded-full bg-gradient-to-r from-[hsl(45,90%,55%)] to-[hsl(130,90%,55%)]" />
+                            <div className="h-4 w-4 rounded bg-blue-500 shadow-sm" />
+                            <span className="font-medium text-blue-600 dark:text-blue-400">{totalParticipants}/{totalParticipants}</span>
                         </div>
                     )}
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded" style={{ backgroundColor: 'hsla(130, 90%, 55%, 1)' }} />
-                        <span>{Math.max(1, totalParticipants - 1)}/{totalParticipants} (High)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded bg-blue-500 shadow-sm" />
-                        <span className="font-medium text-blue-600 dark:text-blue-400">All Available</span>
-                    </div>
-                    {isInteractive && (
+                    {(isInteractive || selectedSlots.size > 0) && (
                         <div className="ml-4 flex items-center gap-2 text-primary font-medium border-l pl-4">
-                            <div className="h-4 w-4 rounded bg-gray-500" />
+                            <div className="h-4 w-4 rounded bg-blue-700" />
                             <span>Selected</span>
                         </div>
                     )}
+                    <div className="ml-4 flex items-center gap-2 text-gray-500 font-medium border-l pl-4">
+                        <div className="h-4 w-4 rounded ring-2 ring-inset ring-gray-400" />
+                        <span>Host Pick</span>
+                    </div>
+
                 </div>
             </div>
         </div>
