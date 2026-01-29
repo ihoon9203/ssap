@@ -15,6 +15,29 @@ interface HeatmapViewProps {
     isInteractive?: boolean;
 }
 
+const HEATMAP_COLORS = [
+    '#6B7280',
+    '#72757A',
+    '#797775',
+    '#817A6F',
+    '#887D69',
+    '#8F7F64',
+    '#96825E',
+    '#9D8559',
+    '#A58753',
+    '#AC8A4D',
+    '#B38D48',
+    '#BA9042',
+    '#C2923C',
+    '#C99537',
+    '#D09831',
+    '#D79A2C',
+    '#DE9D26',
+    '#E6A020',
+    '#F4A515',
+    '#3B82F6'
+];
+
 export function HeatmapView({
     startDate,
     endDate,

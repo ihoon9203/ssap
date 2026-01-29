@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -36,7 +36,21 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    await supabase.auth.getUser()
+    // Debugging: Log environment variable status (do not log actual values in production)
+    const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL
+    const hasKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!hasUrl || !hasKey) {
+        console.error('Middleware Error: Missing Supabase environment variables', { hasUrl, hasKey })
+    }
+
+    try {
+        await supabase.auth.getUser()
+    } catch (error) {
+        console.error('Middleware Error: Failed to fetch user from Supabase:', error)
+        // If auth fails, we should probably still allow the request to proceed, 
+        // or the client component will handle the auth state.
+        // For now, logging the error is enough to debug "fetch failed".
+    }
 
     return response
 }
