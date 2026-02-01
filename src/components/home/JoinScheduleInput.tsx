@@ -74,7 +74,7 @@ export function JoinScheduleInput() {
         <form onSubmit={handleJoin} className="relative w-full max-w-sm">
             <input
                 type="text"
-                placeholder="Enter invite code..."
+                placeholder="초대 코드를 입력해주세요"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 className={cn(
@@ -97,7 +97,7 @@ export function JoinScheduleInput() {
                 ) : (
                     <ArrowRight className="h-4 w-4" />
                 )}
-                <span className="sr-only">Join Schedule</span>
+                <span className="sr-only">약속 참여하기</span>
             </button>
 
             {/* Simple Modal Overlay */}
@@ -106,7 +106,7 @@ export function JoinScheduleInput() {
                     <div className="w-full max-w-md rounded-2xl bg-background p-6 shadow-xl ring-1 ring-border">
                         <div className="mb-4 flex items-start justify-between">
                             <h3 className="text-xl font-semibold tracking-tight text-foreground">
-                                Join Schedule?
+                                일정에 참여하시겠습니까?
                             </h3>
                             <button
                                 onClick={closeModal}
@@ -133,14 +133,14 @@ export function JoinScheduleInput() {
                                     onClick={closeModal}
                                     className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
                                 >
-                                    Cancel
+                                    취소
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleConfirmJoin}
                                     className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                                 >
-                                    Join
+                                    참여하기
                                 </button>
                             </div>
                         </div>

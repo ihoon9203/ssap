@@ -69,7 +69,7 @@ export default function Home() {
           <div>
             <UserEditor />
             <p className="text-muted-foreground">
-              Manage your schedules and events
+              일정과 이벤트를 관리하세요
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -80,7 +80,7 @@ export default function Home() {
               )}
             >
               <Plus className="h-4 w-4" />
-              New Schedule
+              새 일정 만들기
             </Link>
           </div>
         </header>
@@ -89,9 +89,9 @@ export default function Home() {
         <section className="rounded-2xl border bg-card p-8 shadow-sm">
           <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:text-left">
             <div className="flex-1">
-              <h2 className="text-xl font-semibold">Have an invite code?</h2>
+              <h2 className="text-xl font-semibold">초대 코드가 있으신가요?</h2>
               <p className="text-sm text-muted-foreground">
-                Enter the code shared with you to join an existing schedule.
+                공유받은 코드를 입력하여 기존 일정에 참여하세요.
               </p>
             </div>
             <JoinScheduleInput />
@@ -101,7 +101,7 @@ export default function Home() {
         {/* Schedules Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Your Schedules</h2>
+            <h2 className="text-xl font-semibold">내 일정 목록</h2>
             <div className="flex rounded-lg border bg-muted p-1">
               <button
                 onClick={() => setView("list")}
@@ -112,7 +112,7 @@ export default function Home() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                List
+                일정 리스트
               </button>
               <button
                 onClick={() => setView("calendar")}
@@ -123,7 +123,7 @@ export default function Home() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Calendar
+                달력
               </button>
             </div>
           </div>

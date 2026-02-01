@@ -61,15 +61,15 @@ export default function NewSchedulePage() {
                     className="mb-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Home
+                    홈으로 돌아가기
                 </Link>
 
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold tracking-tight text-primary">
-                        Create New Schedule
+                        새 약속 만들기
                     </h1>
                     <p className="text-muted-foreground">
-                        Set up the details and date range for your event.
+                        이벤트의 상세 정보와 날짜 범위를 설정하세요.
                     </p>
                 </div>
 
@@ -90,7 +90,7 @@ export default function NewSchedulePage() {
                                     {s}
                                 </div>
                                 <span className="text-xs text-muted-foreground font-medium">
-                                    {s === 1 ? "Details" : s === 2 ? "Dates" : "Times"}
+                                    {s === 1 ? "정보" : s === 2 ? "날짜" : "시간"}
                                 </span>
                             </div>
                         ))}
@@ -102,12 +102,11 @@ export default function NewSchedulePage() {
                             <div className="space-y-6">
                                 <div className="space-y-2">
                                     <label htmlFor="title" className="text-sm font-medium">
-                                        Event Title
+                                        약속 제목
                                     </label>
                                     <input
                                         id="title"
                                         type="text"
-                                        placeholder="e.g., Project Kickoff"
                                         value={formData.title}
                                         onChange={(e) =>
                                             setFormData({ ...formData, title: e.target.value })
@@ -118,11 +117,10 @@ export default function NewSchedulePage() {
                                 </div>
                                 <div className="space-y-2">
                                     <label htmlFor="description" className="text-sm font-medium">
-                                        Description (Optional)
+                                        설명 (선택사항)
                                     </label>
                                     <textarea
                                         id="description"
-                                        placeholder="Add some details..."
                                         value={formData.description}
                                         onChange={(e) =>
                                             setFormData({ ...formData, description: e.target.value })
@@ -135,7 +133,7 @@ export default function NewSchedulePage() {
                                     disabled={!formData.title.trim()}
                                     className="w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-50"
                                 >
-                                    Next: Select Dates
+                                    다음: 날짜 선택
                                 </button>
                             </div>
                         )}
@@ -151,7 +149,7 @@ export default function NewSchedulePage() {
                                     />
 
                                     <div className="w-full rounded-lg border bg-muted/50 p-4 text-center">
-                                        <p className="text-sm text-muted-foreground mb-2">Selected Dates ({formData.dates.length})</p>
+                                        <p className="text-sm text-muted-foreground mb-2">선택된 날짜 ({formData.dates.length})</p>
                                         <div className="flex flex-wrap gap-2 justify-center max-h-[100px] overflow-y-auto">
                                             {formData.dates.length > 0 ? (
                                                 formData.dates.map(date => (
@@ -160,7 +158,7 @@ export default function NewSchedulePage() {
                                                     </span>
                                                 ))
                                             ) : (
-                                                <span className="text-muted-foreground italic text-xs">None selected</span>
+                                                <span className="text-muted-foreground italic text-xs">선택된 날짜 없음</span>
                                             )}
                                         </div>
                                     </div>
@@ -171,14 +169,14 @@ export default function NewSchedulePage() {
                                         onClick={() => setStep(1)}
                                         className="w-full rounded-full border border-input bg-background py-3 font-medium transition-all hover:bg-muted"
                                     >
-                                        Back
+                                        이전
                                     </button>
                                     <button
                                         onClick={() => setStep(3)}
                                         disabled={formData.dates.length === 0}
                                         className="w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-50"
                                     >
-                                        Next: Select Times
+                                        다음: 시간 선택
                                     </button>
                                 </div>
                             </div>
@@ -187,7 +185,7 @@ export default function NewSchedulePage() {
                         {step === 3 && (
                             <div className="space-y-6">
                                 <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                                    <span className="font-semibold">Tip:</span> Drag on the columns to set the available time range for each day.
+                                    <span className="font-semibold">Tip:</span> 드래그하여 각 날짜의 가능한 시간 범위를 설정하세요.
                                 </div>
 
                                 <TimeTable
@@ -201,7 +199,7 @@ export default function NewSchedulePage() {
                                         onClick={() => setFormData({ ...formData, availability: [] })}
                                         className="rounded-full border border-input bg-background px-6 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
                                     >
-                                        Reset
+                                        초기화
                                     </button>
                                 </div>
 
@@ -210,7 +208,7 @@ export default function NewSchedulePage() {
                                         onClick={() => setStep(2)}
                                         className="w-full rounded-full border border-input bg-background py-3 font-medium transition-all hover:bg-muted"
                                     >
-                                        Back
+                                        이전
                                     </button>
                                     <button
                                         onClick={handleCreate}
@@ -222,7 +220,7 @@ export default function NewSchedulePage() {
                                         ) : (
                                             <Calendar className="h-4 w-4" />
                                         )}
-                                        Create Schedule
+                                        일정 생성하기
                                     </button>
                                 </div>
                             </div>

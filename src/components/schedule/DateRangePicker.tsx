@@ -181,7 +181,7 @@ export function DateRangePicker({
                 })}
             </div>
             <div className="mt-4 text-center text-xs text-muted-foreground">
-                Click and drag to select multiple dates
+                클릭하고 드래그하여 여러 날짜를 선택하세요
             </div>
         </div>
     );

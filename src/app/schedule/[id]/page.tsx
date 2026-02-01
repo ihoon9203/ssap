@@ -112,27 +112,27 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
     };
 
     const handleConfirm = async () => {
-        if (!confirm("Are you sure you want to confirm this schedule? This will notify all participants.")) return;
+        if (!confirm("약속 시간을 확정하시겠습니까? 모든 참여자에게 알림이 전송됩니다.")) return;
         if (currentUser == null) {
-            alert("Please log in to confirm this schedule.");
+            alert("약속 시간을 확정하려면 로그인해주세요.");
             return;
         }
         const { data, error } = await confirmSchedule(id, currentUser.id, Array.from(selectedAvailabilities));
         if (data) {
             setIsConfirmed(true);
-            alert("Schedule confirmed! Notifications sent.");
+            alert("약속 시간이 확정되었습니다! 알림을 보냈습니다.");
         } else {
-            alert(error?.message || "Failed to confirm schedule.");
+            alert(error?.message || "약속 시간 확정에 실패했습니다.");
         }
     };
 
     const handleSaveAvailability = async () => {
         if (!availabilities || availabilities.length === 0) {
-            alert("Please select at least one availability.");
+            alert("최소 하나 이상의 시간대를 선택해주세요.");
             return;
         }
         if (currentUser == null) {
-            alert("Please log in to save your availability.");
+            alert("약속 일정을 저장하려면 로그인해주세요.");
             return;
         }
 
@@ -140,17 +140,17 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
             if (isCreator) {
                 // Creator updates the Schedule's available_time
                 await updateSchedule(id, currentUser.id, { available_time: availabilities });
-                alert("Schedule times updated successfully!");
+                alert("약속 시간이 업데이트되었습니다!");
             } else {
                 // Participant saves their availability
 
                 await saveAvailability(id, currentUser.id, availabilities);
-                alert("Availability saved successfully!");
+                alert("약속 가능한 시간이 저장되었습니다!");
                 await fetchGroupAvailabilities();
             }
         } catch (error: any) {
             console.error("Error saving:", error);
-            alert(error.message || "Failed to save.");
+            alert(error.message || "저장에 실패했습니다.");
         }
     };
 
@@ -272,9 +272,9 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                 <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <Link href="/" className="text-sm text-muted-foreground hover:underline">Home</Link>
+                            <Link href="/" className="text-sm text-muted-foreground hover:underline">홈</Link>
                             <span className="text-muted-foreground">/</span>
-                            <span className="text-sm font-medium">Schedule</span>
+                            <span className="text-sm font-medium">일정</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-3xl font-bold tracking-tight text-primary">
@@ -282,7 +282,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                             </h1>
                             {isConfirmed && (
                                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                    Confirmed
+                                    확정됨
                                 </span>
                             )}
                         </div>
@@ -294,7 +294,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                         <div className="flex items-center gap-2 rounded-lg border bg-card p-2 shadow-sm">
                             <span className="px-2 text-sm font-medium text-muted-foreground">
-                                Code:
+                                코드:
                             </span>
                             <code className="rounded bg-muted px-2 py-1 font-mono text-sm font-bold">
                                 {schedule.invite_code}
@@ -336,7 +336,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                         >
                             <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4" />
-                                My Availability
+                                나의 일정
                             </div>
                         </button>
                         <button
@@ -350,7 +350,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                         >
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4" />
-                                Group Result
+                                전체 일정
                             </div>
                         </button>
                         <button
@@ -366,7 +366,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" color="#5865F2">
                                     <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 13.48 13.48 0 0 0-.59 1.227 18.312 18.312 0 0 0-5.526 0 13.48 13.48 0 0 0-.59-1.227.074.074 0 0 0-.079-.037 19.791 19.791 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.118.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.076.076 0 0 0-.04.106 14.1 14.1 0 0 0 1.225 1.994.076.076 0 0 0 .084.028 19.9 19.9 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z" />
                                 </svg>
-                                Discord Connect
+                                디스코드 연결
                             </div>
                         </button>
                     </div>
@@ -393,7 +393,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                     {activeTab === "input" ? (
                         <div className="space-y-6">
                             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                                <span className="font-semibold">Tip:</span> Click and drag to select multiple time slots.
+                                <span className="font-semibold">Tip:</span> 클릭하고 드래그하여 여러 시간대를 선택할 수 있습니다.
                             </div>
                             <TimeTable
                                 dates={scheduleDates}
@@ -407,10 +407,10 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                     if (isCreator && schedule?.available_time) setAvailabilities(schedule.available_time);
                                     else setAvailabilities([]);
                                 }}>
-                                    Reset
+                                    초기화
                                 </button>
                                 <button className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90" onClick={handleSaveAvailability}>
-                                    {isCreator ? "Update Schedule Times" : "Save Availability"}
+                                    {isCreator ? "일정 시간 업데이트" : "내 일정 저장"}
                                 </button>
                             </div>
                         </div>
@@ -431,9 +431,9 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                 {/* Creator Actions - Only show if current user is creator */}
                                 {schedule?.creator_id === currentUser?.id && (
                                     <div className="rounded-xl border bg-card p-6 shadow-sm">
-                                        <h3 className="text-lg font-semibold">Finalize Schedule</h3>
+                                        <h3 className="text-lg font-semibold">일정 확정하기</h3>
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            Select a time slot on the heatmap above and confirm to notify everyone.
+                                            위 히트맵에서 시간대를 선택하고 확정하면 모두에게 알림을 보냅니다.
                                         </p>
                                         <div className="mt-4 flex justify-end">
                                             <button
@@ -442,7 +442,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                                                 className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                                             >
                                                 <Bell className="h-4 w-4" />
-                                                Confirm & Notify
+                                                확정 및 알림 전송
                                             </button>
                                         </div>
                                     </div>
