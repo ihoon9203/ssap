@@ -287,7 +287,7 @@ export function TimeTable({ dates, availabilities, allowedSlots, onChange }: Tim
             </div>
 
             <div className="border-t bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-                Click and drag to select a range of times
+                클릭하고 드래그하여 시간 범위를 선택하세요
             </div>
         </div>
     );

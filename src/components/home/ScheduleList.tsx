@@ -18,9 +18,9 @@ export function ScheduleList({ schedules }: { schedules: ScheduleWithDetails[] }
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                     <Calendar className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">No schedules yet</h3>
+                <h3 className="mt-4 text-lg font-semibold">약속이 없어요...</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                    Create a new schedule or join one with an invite code.
+                    새로운 약속을 만들거나 초대 코드로 참여해보세요.
                 </p>
             </div>
         );
@@ -85,7 +85,7 @@ export function ScheduleList({ schedules }: { schedules: ScheduleWithDetails[] }
                                         )}
                                     </>
                                 ) : (
-                                    <span className="text-sm text-muted-foreground">No dates selected</span>
+                                    <span className="text-sm text-muted-foreground">선택된 날짜가 없어요</span>
                                 )}
                             </div>
                         </div>
@@ -94,7 +94,7 @@ export function ScheduleList({ schedules }: { schedules: ScheduleWithDetails[] }
                     <div className="flex items-center gap-4">
                         <div className="hidden text-right sm:block">
                             <div className="text-sm font-medium">
-                                {schedule.participant_count} Participants
+                                {schedule.participant_count} 명
                             </div>
                             <div className={cn(
                                 "text-xs capitalize",

@@ -6,8 +6,10 @@ export default function LoginPage() {
         <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
             <div className="w-full max-w-md space-y-8 rounded-2xl border bg-card p-8 shadow-lg animate-in fade-in zoom-in duration-500">
                 <div className="text-center">
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Welcome to SSAP</h1>
-                    <p className="mt-2 text-muted-foreground">Sign in to manage your schedules</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-primary whitespace-pre-wrap">
+                        {`SSAP에 오신 것을\n환영합니다`}
+                    </h1>
+                    <p className="mt-2 text-muted-foreground">로그인하고 약속을 잡아보세요!</p>
                 </div>
 
                 <div className="space-y-4">
@@ -31,15 +33,7 @@ export default function LoginPage() {
                                 fill="#EA4335"
                             />
                         </svg>
-                        Continue with Google
-                    </AuthButton>
-
-                    <AuthButton provider="kakao" className="bg-[#FEE500] text-black hover:bg-[#FDD835] border-none">
-                        {/* Kakao Icon SVG */}
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 3C5.925 3 1 6.925 1 11.775c0 2.9 1.75 5.5 4.5 7.05-.2.75-.725 2.725-.825 3.125-.125.475.175.475.375.325.25-.175 2.9-1.925 4.025-2.7.95.125 1.925.2 2.925.2 6.075 0 11-3.925 11-8.775S17.075 3 12 3z" />
-                        </svg>
-                        Continue with Kakao
+                        Google로 계속하기
                     </AuthButton>
 
                     <AuthButton provider="discord" className="bg-[#5865F2] text-white hover:bg-[#4752C4] border-none">
@@ -47,7 +41,7 @@ export default function LoginPage() {
                         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 13.48 13.48 0 0 0-.59 1.227 18.312 18.312 0 0 0-5.526 0 13.48 13.48 0 0 0-.59-1.227.074.074 0 0 0-.079-.037 19.791 19.791 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.118.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.076.076 0 0 0-.04.106 14.1 14.1 0 0 0 1.225 1.994.076.076 0 0 0 .084.028 19.9 19.9 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z" />
                         </svg>
-                        Continue with Discord
+                        Discord로 계속하기
                     </AuthButton>
                 </div>
             </div>

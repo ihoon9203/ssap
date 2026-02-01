@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SSAP - Scheduling Made Simple",
-  description: "The easiest way to schedule meetings with friends and colleagues.",
+  title: "SSAP - 간편한 일정 조율",
+  description: "친구, 동료와의 모임 시간을 가장 쉽고 빠르게 정해보세요.",
 };
 
 export default async function RootLayout({

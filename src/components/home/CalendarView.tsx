@@ -6,14 +6,15 @@ import {
     eachDayOfInterval,
     endOfMonth,
     endOfWeek,
-    format,
     isSameDay,
     isSameMonth,
-    isValid,
     startOfMonth,
     startOfWeek,
     subMonths,
-} from "date-fns";
+    formatDate,
+    WEEK_DAYS,
+} from "@/lib/date";
+import { format } from "date-fns"; // Keep for internal logic if needed, but perfer localized for display
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -37,8 +38,8 @@ export function CalendarView({ schedules }: { schedules: ScheduleWithDetails[] }
     });
 
     const getSchedulesForDay = (day: Date) => {
-        const dayStr = format(day, "yyyy-MM-dd");
-        const dayStrCompact = format(day, "yyyyMMdd");
+        const dayStr = format(day, "yyyy-MM-dd"); // Internal format
+        const dayStrCompact = format(day, "yyyyMMdd"); // Internal format
 
         return schedules.map(schedule => {
             let matches = false;
@@ -96,7 +97,7 @@ export function CalendarView({ schedules }: { schedules: ScheduleWithDetails[] }
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
             <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">
-                    {format(currentDate, "MMMM yyyy")}
+                    {formatDate(currentDate, "yyyy년 M월")}
                 </h2>
                 <div className="flex gap-2">
                     <button
@@ -115,7 +116,7 @@ export function CalendarView({ schedules }: { schedules: ScheduleWithDetails[] }
             </div>
 
             <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium text-muted-foreground">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                {WEEK_DAYS.map((day) => (
                     <div key={day} className="py-2">
                         {day}
                     </div>
